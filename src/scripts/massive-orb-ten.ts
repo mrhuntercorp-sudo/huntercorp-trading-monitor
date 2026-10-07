@@ -1,4 +1,5 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
+import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { backtestNaiveOrb } from "../research/backtest.js";
 import { summarizePerformance } from "../research/metrics.js";
 import { newYorkClock } from "../market/time.js";
@@ -10,14 +11,17 @@ const dates = ["2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25",
   "2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02"];
 const provider = new MassiveHistoricalProvider(key);
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+const cached = new CachedHistoricalDays({async getContractMinuteBars(contract,from,to) {
+  await wait(13000);
+  return provider.getContractMinuteBars(contract,from,to);
+}});
 console.log("=== TM001 TEN-SESSION ORB RESEARCH CONTROL ===");
-console.log("Request pacing: 13 seconds between calls; no paid upgrade.");
+console.log("Verified cache; 13-second spacing on cache misses; no paid upgrade.");
 const contract = await provider.resolveContract("NQ", dates.at(-1)!);
 console.log("Single contract:", contract.ticker, "(rollover policy NOT validated)");
 const bars: MinuteBar[] = [];
 for (const date of dates) {
-  await wait(13000);
-  const batch = await provider.getContractMinuteBars(contract, date, date);
+  const batch = await cached.getDay(contract,date);
   const rth = batch.filter(b => {
     const c = newYorkClock(b.timestampMs);
     const m = c.hour * 60 + c.minute;
