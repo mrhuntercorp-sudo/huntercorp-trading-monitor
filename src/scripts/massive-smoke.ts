@@ -1,22 +1,35 @@
-import { readFileSync } from "node:fs";
 import { MassiveHistoricalProvider } from "../providers/massive.js";
-function apiKey():string {
- const text=readFileSync(".env","utf8").replace(/^\\uFEFF/, "");
- const m=text.match(/^MASSIVE_API_KEY=(.+)$/m);
- if(!m?.[1]?.trim()) throw new Error("MASSIVE_API_KEY missing from .env.");
- return m[1].trim();
+
+function apiKey(): string {
+  const key = process.env.MASSIVE_API_KEY?.trim();
+  if (!key) throw new Error("MASSIVE_API_KEY missing from environment.");
+  return key;
 }
-const tradeDate=process.argv[2]??"2026-10-01";
-const provider=new MassiveHistoricalProvider(apiKey());
+
+const tradeDate = process.argv[2] ?? "2026-10-01";
+const provider = new MassiveHistoricalProvider(apiKey());
+
 console.log("=== TM001 MASSIVE NQ SMOKE TEST ===");
 console.log(`Trade date: ${tradeDate}`);
-const contract=await provider.resolveContract("NQ",tradeDate);
+
+const contract = await provider.resolveContract("NQ", tradeDate);
 console.log(`Contract: ${contract.ticker}`);
-console.log(`Tick size: ${contract.tradeTickSize??"unknown"}`);
-const bars=await provider.getContractMinuteBars(contract,tradeDate,tradeDate);
+console.log(`Tick size: ${contract.tradeTickSize ?? "unknown"}`);
+
+const bars = await provider.getContractMinuteBars(contract, tradeDate, tradeDate);
 console.log(`Minute bars returned: ${bars.length}`);
-const sample=bars[0];
-if(!sample) throw new Error("No valid minute bars returned.");
-console.log("First normalized bar:",{ticker:sample.contractTicker,timestampUtc:new Date(sample.timestampMs).toISOString(),
- sessionEndDate:sample.sessionEndDate,open:sample.open,high:sample.high,low:sample.low,close:sample.close,volume:sample.volume});
+
+const sample = bars[0];
+if (!sample) throw new Error("No valid minute bars returned.");
+
+console.log("First normalized bar:", {
+  ticker: sample.contractTicker,
+  timestampUtc: new Date(sample.timestampMs).toISOString(),
+  sessionEndDate: sample.sessionEndDate,
+  open: sample.open,
+  high: sample.high,
+  low: sample.low,
+  close: sample.close,
+  volume: sample.volume,
+});
 console.log("TM001 MASSIVE NQ SMOKE: GREEN");
