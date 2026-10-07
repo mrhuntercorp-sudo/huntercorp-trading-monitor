@@ -36,7 +36,7 @@ export class MassiveHistoricalProvider implements MarketDataProvider {
   async getContractMinuteBars(contract:FuturesContract,fromDate:string,toDate:string):Promise<MinuteBar[]> {
     let next:URL|null=new URL(`/futures/v1/aggs/${encodeURIComponent(contract.ticker)}`,BASE_URL);
     next.searchParams.set("resolution","1min"); next.searchParams.set("window_start.gte",fromDate);
-    next.searchParams.set("window_start.lte",toDate); next.searchParams.set("limit","1000");
+    next.searchParams.set("window_start.lt", new Date(Date.parse(toDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10)); next.searchParams.set("limit","50000");
     next.searchParams.set("sort","window_start.asc");
     const bars:MinuteBar[]=[];
     while(next){
