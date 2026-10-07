@@ -9,7 +9,8 @@
     "test": "node --import tsx --test test/**/*.test.ts",
     "smoke:massive": "node --env-file=.env --import tsx src/scripts/massive-smoke.ts",
     "quality:massive": "node --env-file=.env --import tsx src/scripts/massive-quality.ts",
-    "features:massive": "node --env-file=.env --import tsx src/scripts/massive-features.ts"
+    "features:massive": "node --env-file=.env --import tsx src/scripts/massive-features.ts",
+    "benchmark:orb": "node --env-file=.env --import tsx src/scripts/massive-orb-benchmark.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
