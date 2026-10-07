@@ -1,4 +1,5 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
+import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { backtestNaiveOrb } from "../research/backtest.js";
 import { buildSessionFeatures } from "../research/session-features.js";
 import { measureOrbPath } from "../research/orb-diagnostics.js";
@@ -12,14 +13,17 @@ const tradeDates = ["2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09
 const fetchDates = ["2026-09-20",...tradeDates.slice(0,5),"2026-09-27",...tradeDates.slice(5)];
 const provider = new MassiveHistoricalProvider(key);
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+const cached = new CachedHistoricalDays({async getContractMinuteBars(contract,from,to) {
+  await wait(13000);
+  return provider.getContractMinuteBars(contract,from,to);
+}});
 const contract = await provider.resolveContract("NQ", tradeDates.at(-1)!);
 console.log("=== TM001 ORB BREAKOUT DIAGNOSTICS ===");
 console.log("Contract:", contract.ticker, "single contract; rollover not validated");
-console.log("13-second request spacing; 12 historical date requests.");
+console.log("Verified cache; 13-second spacing on cache misses only.");
 const all: MinuteBar[] = [];
 for (const date of fetchDates) {
-  await wait(13000);
-  const batch = await provider.getContractMinuteBars(contract,date,date);
+  const batch = await cached.getDay(contract,date);
   console.log(date, "UTC bars:",batch.length);
   all.push(...batch);
 }
