@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { MassiveHistoricalProvider } from "../providers/massive.js";
 function apiKey():string {
- const m=readFileSync(".env","utf8").match(/^MASSIVE_API_KEY=(.+)$/m);
+ const text=readFileSync(".env","utf8").replace(/^\\uFEFF/, "");
+ const m=text.match(/^MASSIVE_API_KEY=(.+)$/m);
  if(!m?.[1]?.trim()) throw new Error("MASSIVE_API_KEY missing from .env.");
  return m[1].trim();
 }
