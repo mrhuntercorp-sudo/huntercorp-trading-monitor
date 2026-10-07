@@ -11,7 +11,8 @@
     "quality:massive": "node --env-file=.env --import tsx src/scripts/massive-quality.ts",
     "features:massive": "node --env-file=.env --import tsx src/scripts/massive-features.ts",
     "benchmark:orb": "node --env-file=.env --import tsx src/scripts/massive-orb-benchmark.ts",
-    "benchmark:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-ten.ts"
+    "benchmark:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-ten.ts",
+    "diagnose:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-diagnostics.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
