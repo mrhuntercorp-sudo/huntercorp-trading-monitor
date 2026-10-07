@@ -40,7 +40,7 @@ export class MassiveHistoricalProvider implements MarketDataProvider {
     next.searchParams.set("sort","window_start.asc");
     const bars:MinuteBar[]=[];
     while(next){
-      const payload=await this.get<MassiveAgg>(next);
+      const payload: MassiveResponse<MassiveAgg> = await this.get<MassiveAgg>(next);
       for(const row of payload.results??[]){
         if(row.window_start==null||row.open==null||row.high==null||row.low==null||row.close==null||row.volume==null||!row.session_end_date) continue;
         bars.push({contractTicker:row.ticker??contract.ticker,productCode:contract.productCode,
