@@ -4,7 +4,7 @@ TM001 is an NQ-first trading intelligence monitor for HunterCorp.
 
 ## V1 mission
 
-Continuously analyze E-mini Nasdaq-100 futures (NQ), summarize overnight/session structure, detect Hunter's defined setup as it develops, and send an alert for human review.
+Continuously analyze E-mini Nasdaq-100 futures (NQ), summarize overnight/session structure, **discover and validate a robust intraday setup from historical evidence**, then detect that approved setup as it develops and send an alert for human review.
 
 ## Hard guardrails
 
@@ -12,29 +12,43 @@ Continuously analyze E-mini Nasdaq-100 futures (NQ), summarize overnight/session
 - **No automated order placement.**
 - **No broker execution module in V1.**
 - **No API keys, account IDs, tokens, or secrets committed to Git.**
-- The detector must implement an explicit, testable setup contract; it must not invent generic AI buy/sell signals.
-- Historical replay and live shadow-mode validation are required before an alert is considered trustworthy.
+- No strategy is accepted because it is popular or because one backtest looks good.
+- Historical replay, out-of-sample testing, robustness checks, and live shadow-mode validation are required before an alert is considered trustworthy.
 - NQ is the only V1 instrument. GC is deferred until NQ is proven.
 
-## Data architecture
+## Research architecture
 
 ```text
-Provider adapter
+Historical NQ data
       |
-Normalized NQ market events
+Normalized market-data adapter
       |
-Session / structure engine
+Session / feature engine
       |
-Deterministic setup detector
+Candidate strategy families
       |
-Context / explanation layer
+Backtest + friction + OOS + robustness
       |
-Alert
+Approved deterministic setup
+      |
+Live market adapter
+      |
+Setup detector + context
+      |
+Phone alert
       |
 Hunter decides whether to trade in TopstepX
 ```
 
-The provider adapter prevents strategy logic from being coupled to a single market-data vendor.
+## Candidate strategy families
+
+1. Filtered 5m / 15m Opening Range Breakout
+2. Opening-drive breakout + pullback/retest
+3. Overnight high/low breakout or rejection
+4. VWAP trend/pullback
+5. Opening-range mean reversion as a counter-hypothesis
+
+See `docs/STRATEGY_DISCOVERY_CONTRACT.md` for the validation contract.
 
 ## Planned providers
 
@@ -48,18 +62,22 @@ The provider adapter prevents strategy logic from being coupled to a single mark
 - [x] NQ-only V1 locked
 - [x] No automated execution locked
 - [x] Provider-independent data architecture locked
-- [ ] Define Hunter's NQ setup contract
+- [x] Strategy-discovery direction locked
+- [x] Candidate strategy families defined
+- [x] Anti-overfitting / promotion gates defined
 - [ ] Implement normalized market-data types
-- [ ] Implement provider adapter
-- [ ] Implement session engine (Asia / London / New York)
+- [ ] Verify and implement development data provider
+- [ ] Implement session / feature engine
+- [ ] Implement backtest harness
+- [ ] Run naive ORB control
+- [ ] Run candidate-family tests
+- [ ] Out-of-sample / sensitivity / regime tests
+- [ ] Select setup only if evidence passes
 - [ ] Implement 09:20–09:25 ET briefing
-- [ ] Implement setup detector
-- [ ] Historical replay harness
-- [ ] Validate detector against known sessions
 - [ ] Live shadow mode
 - [ ] Phone alert transport
 - [ ] Add GC only after NQ is proven
 
 ## Current gate
 
-**Do not implement the setup detector until Hunter's actual setup has been translated into measurable conditions.**
+**Build the research/data harness. Do not promote a trading setup until it passes the Strategy Discovery Contract.**
