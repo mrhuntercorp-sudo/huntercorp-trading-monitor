@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/**/*.test.ts",
     "smoke:massive": "node --env-file=.env --import tsx src/scripts/massive-smoke.ts",
-    "quality:massive": "node --env-file=.env --import tsx src/scripts/massive-quality.ts"
+    "quality:massive": "node --env-file=.env --import tsx src/scripts/massive-quality.ts",
+    "features:massive": "node --env-file=.env --import tsx src/scripts/massive-features.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
