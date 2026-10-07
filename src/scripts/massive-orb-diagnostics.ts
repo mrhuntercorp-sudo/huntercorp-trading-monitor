@@ -1,6 +1,7 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
 import { backtestNaiveOrb } from "../research/backtest.js";
 import { buildSessionFeatures } from "../research/session-features.js";
+import { measureOrbPath } from "../research/orb-diagnostics.js";
 import { newYorkClock } from "../market/time.js";
 import type { MinuteBar } from "../market/types.js";
 
@@ -50,16 +51,7 @@ for (const minutes of [5,15] as const) {
     const trigger=day.slice(minutes).find(b=>b.close>high||b.close<low);
     if(!trigger||trigger.close!==trade.entry) throw new Error("Trigger mismatch: "+date);
     const later=day.filter(b=>b.timestampMs>trigger.timestampMs);
-    let exitIndex=later.length-1;
-    for(let i=0;i<later.length;i++){
-      const b=later[i]!;
-      const stop=trade.direction==="LONG"?trade.entry-40:trade.entry+40;
-      const target=trade.direction==="LONG"?trade.entry+80:trade.entry-80;
-      if(trade.direction==="LONG"?(b.low<=stop||b.high>=target):(b.high>=stop||b.low<=target)){exitIndex=i;break;}
-    }
-    const held=later.slice(0,exitIndex+1);
-    const favorable=held.map(b=>trade.direction==="LONG"?b.high-trade.entry:trade.entry-b.low);
-    const adverse=held.map(b=>trade.direction==="LONG"?trade.entry-b.low:b.high-trade.entry);
+    const path=measureOrbPath(later,trade.entry,trade.direction,high,low,40,80);
     const features=buildSessionFeatures(all,date,tradeDates[tradeDates.indexOf(date)-1]??"2026-09-18");
     const clock=newYorkClock(trigger.timestampMs);
     const postClose=later.at(-1)?.close??trigger.close;
@@ -68,8 +60,7 @@ for (const minutes of [5,15] as const) {
       overnightLow:features.overnight?.low,entry:trade.entry,
       entryAboveOvernightHigh:trade.entry>(features.overnight?.high??Infinity),
       entryBelowOvernightLow:trade.entry<(features.overnight?.low??-Infinity),
-      maxFavorablePoints:held.length?Math.max(0,...favorable):0,
-      maxAdversePoints:held.length?Math.max(0,...adverse):0,
+      ...path,
       closeBeyondOppositeOpeningBoundary:trade.direction==="LONG"?postClose<low:postClose>high,
       exitReason:trade.exitReason,netPnlUsd:trade.netPnlUsd}));
   }
