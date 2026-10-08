@@ -1,5 +1,6 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
+import { auditRthCoverage } from "../research/rth-coverage.js";
 import { backtestNaiveOrb } from "../research/backtest.js";
 import { summarizePerformance } from "../research/metrics.js";
 import { newYorkClock } from "../market/time.js";
@@ -27,12 +28,9 @@ for (const date of dates) {
     const m = c.hour * 60 + c.minute;
     return c.date === date && m >= 570 && m < 960;
   });
-  const unique = new Set(rth.map(b => b.timestampMs));
-  const gaps = rth.slice(1).filter((b,i) => b.timestampMs-rth[i]!.timestampMs !== 60000).length;
-  console.log(`${date}: RTH=${rth.length}, gaps=${gaps}, duplicates=${rth.length-unique.size}`);
-  if (rth.length !== 390 || gaps || unique.size !== 390) {
-    throw new Error(`DATA QUALITY RED: ${date}; no partial benchmark.`);
-  }
+  const coverage = auditRthCoverage(batch,date,contract.ticker);
+  console.log(`${date}: RTH=${coverage.observedMinutes}, missing=${coverage.missingMinutes}, status=${coverage.status}`);
+  if (coverage.status !== "COMPLETE") throw new Error("DATA QUALITY RED: "+date+" "+JSON.stringify(coverage.missingRanges));
   bars.push(...rth);
 }
 for (const openingRangeMinutes of [5,15] as const) {
