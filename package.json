@@ -37,7 +37,8 @@
     "audit:historical-coverage": "node --import tsx src/scripts/massive-nq-cache-coverage.ts",
     "audit:missing-history": "node --import tsx src/scripts/massive-nq-missing-history.ts",
     "audit:recovery-preflight": "node --import tsx src/scripts/massive-nq-recovery-preflight.ts",
-    "audit:recovery-safety-gate": "node --import tsx src/scripts/massive-nq-recovery-safety-gate.ts"
+    "audit:recovery-safety-gate": "node --import tsx src/scripts/massive-nq-recovery-safety-gate.ts",
+    "recover:nq-one-request": "node --env-file=.env --import tsx src/scripts/massive-nq-one-request-recovery.ts --execute"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
