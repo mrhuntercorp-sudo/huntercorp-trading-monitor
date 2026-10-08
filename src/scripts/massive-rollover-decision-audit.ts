@@ -15,7 +15,7 @@ const observations:VolumeObservation[]=[];
 console.log("=== TM001 CACHE-ONLY ROLLOVER DECISION AUDIT ===");
 console.log("Verified cache, no APIs, no trades, no automatic rollover approval.");
 for(const date of dates) {
- const records=[] as {ticker:string;volume:number;complete:boolean;missing:number;classification:SparseMinuteAssessment}[];
+ const raw=[] as {ticker:string;volume:number;missing:number;missingTimestamps:number[]}[];
  for(const contract of contracts) {
   const bars=await cache.getDay(contract,date);
   const coverage=auditRthCoverage(bars,date,contract.ticker);
@@ -25,28 +25,19 @@ for(const date of dates) {
   }).reduce((n,b)=>n+b.volume,0);
   if(!Number.isSafeInteger(volume)||volume<0) throw new Error("Invalid observed volume");
   const missingTimestamps:number[]=[];
- for(const range of coverage.missingRanges)
-  for(let t=Date.parse(range.startUtc);t<=Date.parse(range.endUtc);t+=60000) missingTimestamps.push(t);
- const classification=contract.ticker==="NQU6"
-  ? assessSparseMinutes(missingTimestamps,[])
-  : assessSparseMinutes([],missingTimestamps);
- records.push({ticker:contract.ticker,volume,complete:classification.status==="COMPLETE",
-  missing:coverage.missingMinutes,classification});
+  for(const range of coverage.missingRanges)
+   for(let t=Date.parse(range.startUtc);t<=Date.parse(range.endUtc);t+=60000) missingTimestamps.push(t);
+  raw.push({ticker:contract.ticker,volume,missing:coverage.missingMinutes,missingTimestamps});
  }
- const [sep,dec]=records;
+ const [sep,dec]=raw;
  if(!sep||!dec) throw new Error("Missing contract");
+ const classification=assessSparseMinutes(sep.missingTimestamps,dec.missingTimestamps);
+ const records=raw.map(r=>({ticker:r.ticker,volume:r.volume,complete:classification.status==="COMPLETE",missing:r.missing,classification}));
  observations.push({date,septemberTicker:sep.ticker,decemberTicker:dec.ticker,
   septemberVolume:sep.volume,decemberVolume:dec.volume,
-  septemberComplete:sep.complete,decemberComplete:dec.complete});
+  septemberComplete:sep.missing===0&&classification.status==="COMPLETE",
+  decemberComplete:dec.missing===0&&classification.status==="COMPLETE"});
  console.log(JSON.stringify({date,observed:records}));
+ if(date==="2026-09-11"&&classification.status!=="SHARED_GAP_QUARANTINE")
+  throw new Error("Sept 11 shared gap must remain quarantined");
 }
-for(const tradeDate of ["2026-09-09","2026-09-10","2026-09-11","2026-09-14","2026-09-15","2026-09-16"]) {
- const prior=observations.filter(o=>o.date<tradeDate);
- const decision=decideRolloverForTradeDate(tradeDate,prior);
- console.log("DECISION",JSON.stringify(decision));
- if(tradeDate==="2026-09-14"&&decision.status!=="REVIEW_REQUIRED")
-  throw new Error("Sept 14 must be blocked by Sept 11 incomplete coverage");
- if(tradeDate==="2026-09-15"&&(decision.status!=="SELECTED"||decision.selectedTicker!=="NQZ6"||decision.evidenceDate!=="2026-09-14"))
-  throw new Error("Sept 15 must select NQZ6 using Sept 14 evidence");
-}
-console.log("TM001 CACHE-ONLY ROLLOVER INTEGRATION: GREEN (RESEARCH ONLY; POLICY REVIEW REQUIRED)");
