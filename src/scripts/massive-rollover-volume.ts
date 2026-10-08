@@ -33,18 +33,24 @@ for(const date of dates) {
   // UTC date includes the entire New York RTH session during September (EDT).
   const bars=await cached.getDay(contract,date);
   const session=rth(bars,date);
-  const contiguous=session.length===390&&session.every((b,i)=>i===0||b.timestampMs-session[i-1]!.timestampMs===60000);
-  if(!contiguous) throw new Error("INCOMPLETE RTH DATA "+date+" "+contract.ticker+" bars="+session.length);
+  const unique=new Set(session.map(b=>b.timestampMs));
+  if(session.length>390||unique.size!==session.length||session.some((b,i)=>i>0&&b.timestampMs<=session[i-1]!.timestampMs))
+    throw new Error("INVALID RTH TIMESTAMPS "+date+" "+contract.ticker);
+  const missingMinutes=390-session.length;
+  if(missingMinutes>0) console.log("SPARSE RTH",date,contract.ticker,"observed="+session.length,"missing="+missingMinutes);
+  row[contract.ticker+"ObservedMinutes"]=session.length;
+  row[contract.ticker+"MissingMinutes"]=missingMinutes;
   const volume=session.reduce((sum,b)=>sum+b.volume,0);
-  if(!Number.isSafeInteger(volume)||volume<=0) throw new Error("INVALID VOLUME "+date+" "+contract.ticker);
+  if(!Number.isSafeInteger(volume)||volume<0) throw new Error("INVALID VOLUME "+date+" "+contract.ticker);
   row[contract.ticker]=volume;
  }
  const oldVolume=row["NQU6"] as number;
  const newVolume=row["NQZ6"] as number;
- row["higherRthVolume"]=newVolume>oldVolume?"NQZ6":oldVolume>newVolume?"NQU6":"TIE";
- row["decemberToSeptemberRatio"]=Number((newVolume/oldVolume).toFixed(4));
+ row["higherObservedRthVolume"]=newVolume>oldVolume?"NQZ6":oldVolume>newVolume?"NQU6":"TIE";
+ row["decemberToSeptemberRatio"]=oldVolume>0?Number((newVolume/oldVolume).toFixed(4)):"UNDEFINED";
+ row["dataCoverage"]="OBSERVED BARS ONLY; SPARSE MINUTES NOT IMPUTED";
  results.push(row);
  console.log(JSON.stringify(row));
 }
-console.log("TM001 ROLLOVER VOLUME AUDIT: DATA VALIDATED; POLICY REVIEW REQUIRED");
-console.log("Scope: sampled RTH only, not full Globex daily volume or open interest.");
+console.log("TM001 ROLLOVER VOLUME AUDIT: OBSERVED-VOLUME COMPARISON; POLICY REVIEW REQUIRED");
+console.log("Scope: sampled RTH only; sparse minutes may reflect no trades or missing provider data. No imputation. Not full Globex volume or open interest.");
