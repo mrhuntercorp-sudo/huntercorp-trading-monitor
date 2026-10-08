@@ -22,7 +22,8 @@
     "audit:rollover-continuity": "node --import tsx src/scripts/massive-rollover-continuity-audit.ts",
     "study:rollover-adjustment": "node --import tsx src/scripts/massive-rollover-adjustment-study.ts",
     "study:rollover-signals": "node --import tsx src/scripts/massive-rollover-signal-integrity.ts",
-    "audit:rollover-overnight": "node --import tsx src/scripts/massive-rollover-overnight-audit.ts"
+    "audit:rollover-overnight": "node --import tsx src/scripts/massive-rollover-overnight-audit.ts",
+    "audit:overnight-inventory": "node --import tsx src/scripts/massive-overnight-cache-inventory.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
