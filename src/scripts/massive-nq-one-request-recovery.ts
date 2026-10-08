@@ -38,9 +38,9 @@ const start=Date.parse(date+"T00:00:00Z");
 const bars:MinuteBar[]=[];
 for(const r of payload.results){
  if(r.ticker && r.ticker!==ticker)throw Error("Unexpected ticker");
- if(!Number.isSafeInteger(r.window_start)||!r.session_end_date||![r.open,r.high,r.low,r.close,r.volume].every(v=>typeof v==="number"&&Number.isFinite(v)))throw Error("Invalid provider bar");
+ if(typeof r.window_start!=="number"||!Number.isFinite(r.window_start)||!r.session_end_date||![r.open,r.high,r.low,r.close,r.volume].every(v=>typeof v==="number"&&Number.isFinite(v)))throw Error("Invalid provider bar");
  const timestampMs=Math.floor(r.window_start!/1000000);
- if(timestampMs<start||timestampMs>=start+86400000||timestampMs%60000!==0)throw Error("Outside requested UTC day");
+ if(!Number.isSafeInteger(timestampMs)||timestampMs<start||timestampMs>=start+86400000||timestampMs%60000!==0)throw Error("Outside requested UTC day");
  if(r.volume!<0||r.low!>Math.min(r.open!,r.close!)||r.high!<Math.max(r.open!,r.close!)||r.low!>r.high!)throw Error("Invalid OHLCV");
  bars.push({contractTicker:ticker,productCode:"NQ",timestampMs,sessionEndDate:r.session_end_date!,open:r.open!,high:r.high!,low:r.low!,close:r.close!,volume:r.volume!});
 }
