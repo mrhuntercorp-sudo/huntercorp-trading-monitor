@@ -18,7 +18,8 @@
     "audit:rollover-gap": "node --import tsx src/scripts/massive-rollover-gap-audit.ts",
     "audit:rollover-decision": "node --import tsx src/scripts/massive-rollover-decision-audit.ts",
     "audit:sparse-minutes": "node --import tsx src/scripts/massive-sparse-minute-audit.ts",
-    "audit:multi-rollover": "node --env-file=.env --import tsx src/scripts/massive-multi-rollover.ts"
+    "audit:multi-rollover": "node --env-file=.env --import tsx src/scripts/massive-multi-rollover.ts",
+    "audit:rollover-continuity": "node --import tsx src/scripts/massive-rollover-continuity-audit.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
