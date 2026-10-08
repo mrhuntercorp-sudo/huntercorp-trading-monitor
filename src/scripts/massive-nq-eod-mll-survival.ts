@@ -52,7 +52,7 @@ for(const window of [5,15] as const){
     balance+=trade.netPnlUsd;
     if(balance<=floor){breached=true;breachDate=trade.date;break;}
     highestEod=Math.max(highestEod,balance);
-    floor=Math.max(floor,highestEod-limit,-0);
+    floor=Math.min(0,Math.max(floor,highestEod-limit));
     daysCompleted++;
    }
    console.log("EOD_MLL "+JSON.stringify({openingRangeMinutes:window,stopPoints,targetPoints,limitUsd:limit,eligibleDates:valid.length,daysCompleted,breached,breachDate,endingBalanceUsd:balance,activeFloorUsd:floor,minEstimatedHeadroomUsd:minHeadroom,method:"EOD threshold update after each trade date; monitored on adverse one-minute OHLC; no payouts or optional DLL",status:"EXPLORATORY_ONLY"}));
