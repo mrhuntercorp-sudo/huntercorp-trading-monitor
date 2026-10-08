@@ -15,7 +15,8 @@
     "diagnose:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-diagnostics.ts",
     "audit:contracts": "node --env-file=.env --import tsx src/scripts/massive-contract-audit.ts",
     "audit:rollover-volume": "node --env-file=.env --import tsx src/scripts/massive-rollover-volume.ts",
-    "audit:rollover-gap": "node --import tsx src/scripts/massive-rollover-gap-audit.ts"
+    "audit:rollover-gap": "node --import tsx src/scripts/massive-rollover-gap-audit.ts",
+    "audit:rollover-decision": "node --import tsx src/scripts/massive-rollover-decision-audit.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
