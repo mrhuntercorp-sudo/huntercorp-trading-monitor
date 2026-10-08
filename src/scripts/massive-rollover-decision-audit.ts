@@ -2,6 +2,7 @@ import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
 import { decideRolloverForTradeDate, type VolumeObservation } from "../research/rollover-decision.js";
 import { newYorkClock } from "../market/time.js";
+import { assessSparseMinutes, type SparseMinuteAssessment } from "../research/sparse-minute-assessment.js";
 import type { FuturesContract } from "../market/types.js";
 
 // Deliberately cache-only: any missing file causes a hard failure, never a provider request.
@@ -14,7 +15,7 @@ const observations:VolumeObservation[]=[];
 console.log("=== TM001 CACHE-ONLY ROLLOVER DECISION AUDIT ===");
 console.log("Verified cache, no APIs, no trades, no automatic rollover approval.");
 for(const date of dates) {
- const records=[] as {ticker:string;volume:number;complete:boolean;missing:number}[];
+ const records=[] as {ticker:string;volume:number;complete:boolean;missing:number;classification:SparseMinuteAssessment}[];
  for(const contract of contracts) {
   const bars=await cache.getDay(contract,date);
   const coverage=auditRthCoverage(bars,date,contract.ticker);
@@ -23,7 +24,14 @@ for(const date of dates) {
    return c.date===date&&m>=570&&m<960;
   }).reduce((n,b)=>n+b.volume,0);
   if(!Number.isSafeInteger(volume)||volume<0) throw new Error("Invalid observed volume");
-  records.push({ticker:contract.ticker,volume,complete:coverage.status==="COMPLETE",missing:coverage.missingMinutes});
+  const missingTimestamps:number[]=[];
+ for(const range of coverage.missingRanges)
+  for(let t=Date.parse(range.startUtc);t<=Date.parse(range.endUtc);t+=60000) missingTimestamps.push(t);
+ const classification=contract.ticker==="NQU6"
+  ? assessSparseMinutes(missingTimestamps,[])
+  : assessSparseMinutes([],missingTimestamps);
+ records.push({ticker:contract.ticker,volume,complete:classification.status==="COMPLETE",
+  missing:coverage.missingMinutes,classification});
  }
  const [sep,dec]=records;
  if(!sep||!dec) throw new Error("Missing contract");
