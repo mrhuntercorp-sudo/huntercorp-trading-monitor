@@ -9,7 +9,7 @@ const cache=new CachedHistoricalDays({async getContractMinuteBars(){throw Error(
 const contract:FuturesContract={ticker:"NQZ6",productCode:"NQ"};
 const dates=["2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02"];
 const fetchDates=["2026-09-20",...dates.slice(0,5),"2026-09-27",...dates.slice(5)];
-const combinations=[[20,40],[20,80],[30,60],[40,40],[40,80],[40,120],[60,80],[60,120]] as const;
+const combinations=[[25,25],[20,40],[20,80],[30,60],[40,40],[40,80],[40,120],[60,80],[60,120]] as const;
 const all:MinuteBar[]=[];
 console.log("=== TM001 NQ STOP / TARGET MATRIX V1 ===");
 console.log("CACHE ONLY | FIXED ENTRIES PER ORB WINDOW | NO OPTIMIZATION APPROVAL");
