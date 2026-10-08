@@ -1,5 +1,6 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
+import { auditRthCoverage } from "../research/rth-coverage.js";
 import { backtestNaiveOrb } from "../research/backtest.js";
 import { buildSessionFeatures } from "../research/session-features.js";
 import { measureOrbPath } from "../research/orb-diagnostics.js";
@@ -35,8 +36,8 @@ function etMinute(b: MinuteBar) {
 }
 for (const date of tradeDates) {
   const rth = all.filter(b=>{const c=etMinute(b);return c.date===date&&c.minute>=570&&c.minute<960;});
-  if(rth.length!==390||rth.slice(1).some((b,i)=>b.timestampMs-rth[i]!.timestampMs!==60000))
-    throw new Error("Incomplete RTH session: "+date);
+  const coverage=auditRthCoverage(rth,date,contract.ticker);
+  if(coverage.status!=="COMPLETE") throw new Error("Incomplete RTH session: "+date+" "+JSON.stringify(coverage.missingRanges));
   const previous = tradeDates[tradeDates.indexOf(date)-1] ?? "2026-09-18";
   const f=buildSessionFeatures(all,date,previous);
   if(f.overnight?.bars!==930) throw new Error("Incomplete overnight session: "+date+" bars="+f.overnight?.bars);
