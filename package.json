@@ -35,7 +35,8 @@
     "study:pattern-recognition": "node --import tsx src/scripts/massive-nq-pattern-recognition.ts",
     "study:liquidity-sweeps": "node --import tsx src/scripts/massive-nq-liquidity-sweeps.ts",
     "audit:historical-coverage": "node --import tsx src/scripts/massive-nq-cache-coverage.ts",
-    "audit:missing-history": "node --import tsx src/scripts/massive-nq-missing-history.ts"
+    "audit:missing-history": "node --import tsx src/scripts/massive-nq-missing-history.ts",
+    "audit:recovery-preflight": "node --import tsx src/scripts/massive-nq-recovery-preflight.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
