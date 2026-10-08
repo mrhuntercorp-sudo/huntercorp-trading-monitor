@@ -28,7 +28,8 @@
     "study:overnight-levels": "node --import tsx src/scripts/massive-rollover-overnight-level-study.ts",
     "study:dual-overnight": "node --import tsx src/scripts/massive-dual-contract-overnight.ts",
     "study:gap-diagnostic": "node --import tsx src/scripts/massive-gap-diagnostic.ts",
-    "study:multi-roll-continuity": "node --import tsx src/scripts/massive-multi-roll-continuity.ts"
+    "study:multi-roll-continuity": "node --import tsx src/scripts/massive-multi-roll-continuity.ts",
+    "study:nq-setup-baseline": "node --import tsx src/scripts/massive-nq-setup-baseline.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
