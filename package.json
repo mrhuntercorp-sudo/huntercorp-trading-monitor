@@ -13,7 +13,8 @@
     "benchmark:orb": "node --env-file=.env --import tsx src/scripts/massive-orb-benchmark.ts",
     "benchmark:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-ten.ts",
     "diagnose:orb10": "node --env-file=.env --import tsx src/scripts/massive-orb-diagnostics.ts",
-    "audit:contracts": "node --env-file=.env --import tsx src/scripts/massive-contract-audit.ts"
+    "audit:contracts": "node --env-file=.env --import tsx src/scripts/massive-contract-audit.ts",
+    "audit:rollover-volume": "node --env-file=.env --import tsx src/scripts/massive-rollover-volume.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
