@@ -1,6 +1,6 @@
 import type { MinuteBar } from "../market/types.js";
 import { inspectOvernightCoverage } from "./rollover-overnight-chain.js";
-import { expectedOvernightMinutes } from "../scripts/massive-overnight-cache-inventory.js";
+import { newYorkClock } from "../market/time.js";
 
 export function compareDualContractOvernight(oldBars:readonly MinuteBar[],newBars:readonly MinuteBar[],
  tradeDate:string,offsetPoints:number){
@@ -10,7 +10,13 @@ export function compareDualContractOvernight(oldBars:readonly MinuteBar[],newBar
  if(old.status!=="COMPLETE"||next.status!=="COMPLETE")
   return {status:"REVIEW_REQUIRED" as const,reason:"INCOMPLETE_DUAL_CONTRACT_OVERNIGHT",
    oldCoverage:old,newCoverage:next};
- const grid=expectedOvernightMinutes(tradeDate);
+ const target=Date.parse(tradeDate+"T00:00:00Z");
+ const prior=new Date(target-86400000).toISOString().slice(0,10);
+ const grid:number[]=[];
+ for(let t=target-2*86400000;t<target+86400000;t+=60000){
+  const c=newYorkClock(t),m=c.hour*60+c.minute;
+  if((c.date===prior&&m>=1080)||(c.date===tradeDate&&m<570))grid.push(t);
+ }
  const a=new Map(oldBars.map(b=>[b.timestampMs,b]));
  const b=new Map(newBars.map(x=>[x.timestampMs,x]));
  let maxAbsHighDifference=0,maxAbsLowDifference=0,sumAbsHighDifference=0,sumAbsLowDifference=0;
