@@ -2,6 +2,7 @@ import { MassiveHistoricalProvider } from "../providers/massive.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { assessSparseMinutes } from "../research/sparse-minute-assessment.js";
 import { newYorkClock } from "../market/time.js";
+import { compareRolloverSelectors } from "../research/rollover-selector-comparison.js";
 import type { FuturesContract } from "../market/types.js";
 
 const key=process.env.MASSIVE_API_KEY?.trim();
@@ -36,8 +37,9 @@ console.log("Research only; RTH observed volume; no imputation; no rollover appr
 for(const cycle of cycles){
  let firstNewLeader:string|undefined;
  let usable=0,review=0,quarantine=0;
+ const observed:{date:string;oldVolume:number;newVolume:number;complete:boolean}[]=[];
  console.log("\nCYCLE",cycle.name,"reference",cycle.reference);
- for(const date of cycle.dates){
+ for(const [index,date] of cycle.dates.entries()){
   const rows:{ticker:string;volume:number;missing:number;missingTs:number[]}[]=[];
   for(const ticker of [cycle.old,cycle.next]){
    const c:FuturesContract={ticker,productCode:"NQ"};
@@ -65,6 +67,11 @@ for(const cycle of cycles){
   if(classification.status==="SHARED_GAP_QUARANTINE") quarantine++;
   const leader=canCompare?(b.volume>a.volume?b.ticker:a.volume>b.volume?a.ticker:"TIE"):"REVIEW";
   if(leader===cycle.next&&!firstNewLeader) firstNewLeader=date;
+  if(index>0){
+   const comparison=compareRolloverSelectors(date,cycle.reference,cycle.dates[index-1]!,observed);
+   console.log("SELECTOR_COMPARISON "+JSON.stringify({cycle:cycle.name,...comparison}));
+  }
+  observed.push({date,oldVolume:a.volume,newVolume:b.volume,complete:canCompare&&leader!=="TIE"});
   console.log(JSON.stringify({cycle:cycle.name,date,oldTicker:a.ticker,oldVolume:a.volume,oldMissing:a.missing,
     newTicker:b.ticker,newVolume:b.volume,newMissing:b.missing,classification,usableComparison:canCompare,
     observedLeader:leader,newToOldRatio:a.volume?Number((b.volume/a.volume).toFixed(4)):null}));
