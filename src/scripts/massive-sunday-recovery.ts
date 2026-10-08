@@ -1,7 +1,5 @@
 import { MassiveHistoricalProvider } from "../providers/massive.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
-import { expectedOvernightMinutes } from "./massive-overnight-cache-inventory.js";
-import { newYorkClock } from "../market/time.js";
 import type { FuturesContract } from "../market/types.js";
 
 const key=process.env.MASSIVE_API_KEY?.trim();
@@ -25,7 +23,10 @@ console.log("ONLY FOUR NAMED UTC DATES | EXISTING MASSIVE PLAN | NO TRADING OR P
 for(const t of targets){
  const contract:FuturesContract={ticker:t.ticker,productCode:"NQ"};
  const bars=await cache.getDay(contract,t.date);
- const required=new Set(expectedOvernightMinutes(t.roll).filter(ms=>new Date(ms).toISOString().slice(0,10)===t.date));
+ const required=new Set<number>();
+ const start=Date.parse(t.date+"T00:00:00Z");
+ const startHour=t.cycle==="2025-12"?23:22;
+ for(let ms=start+startHour*3600000;ms<start+86400000;ms+=60000)required.add(ms);
  const present=new Set(bars.map(b=>b.timestampMs));
  const missing=[...required].filter(ms=>!present.has(ms));
  const selected=bars.filter(b=>required.has(b.timestampMs));
