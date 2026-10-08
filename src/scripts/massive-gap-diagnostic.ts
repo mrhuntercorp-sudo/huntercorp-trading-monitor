@@ -28,9 +28,10 @@ const diffs=times.map(t=>{const x=a.get(t)!,y=b.get(t)!;return {high:y.high-offs
 const mean=(key:"high"|"low"|"close")=>diffs.reduce((s,d)=>s+Math.abs(d[key]),0)/diffs.length;
 let same=0,adjacent=0,skippedAcrossGap=0;
 for(let i=1;i<times.length;i++){
- if(times[i]-times[i-1]!==60000){skippedAcrossGap++;continue;}
+ const current=times[i]!,previous=times[i-1]!;
+ if(current-previous!==60000){skippedAcrossGap++;continue;}
  adjacent++;
- if(Math.sign(a.get(times[i])!.close-a.get(times[i-1])!.close)===Math.sign(b.get(times[i])!.close-b.get(times[i-1])!.close))same++;
+ if(Math.sign(a.get(current)!.close-a.get(previous)!.close)===Math.sign(b.get(current)!.close-b.get(previous)!.close))same++;
 }
 console.log("MARCH_PARTIAL_COMPARISON "+JSON.stringify({status:"PARTIAL_DIAGNOSTIC_ONLY",matchedMinutes:times.length,expectedMinutes:930,omittedUtc:new Date(missing).toISOString(),offsetPoints:offset,meanAbsoluteHighDifferencePoints:mean("high"),meanAbsoluteLowDifferencePoints:mean("low"),meanAbsoluteCloseDifferencePoints:mean("close"),maxAbsoluteHighDifferencePoints:Math.max(...diffs.map(d=>Math.abs(d.high))),maxAbsoluteLowDifferencePoints:Math.max(...diffs.map(d=>Math.abs(d.low))),adjacentMinuteTransitions:adjacent,skippedAcrossGap,closeDirectionAgreement:same/adjacent}));
 const sepOld=await cache.getDay(contract("NQU6"),"2026-09-11");
