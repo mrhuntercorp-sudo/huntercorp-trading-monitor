@@ -12,7 +12,7 @@ console.log("=== TM001 HISTORICAL CACHE COVERAGE AUDIT ===");
 console.log("READ ONLY | NO API | NO MUTATIONS | NO STRATEGY APPROVAL");
 const tickers=(await readdir(root,{withFileTypes:true})).filter(e=>e.isDirectory()&&/^NQ[A-Z][0-9]$/.test(e.name)).map(e=>e.name).sort();
 if(!tickers.length)throw Error("No NQ contract cache directories");
-const datePattern=/^\\d{4}-\\d{2}-\\d{2}\\.json$/;
+const datePattern=/^[0-9]{4}-[0-9]{2}-[0-9]{2}[.]json$/;
 const all=new Map<string,MinuteBar[]>();
 let totalFiles=0;
 for(const ticker of tickers){
@@ -22,6 +22,7 @@ for(const ticker of tickers){
  for(const date of dates){const bars=await cache.getDay(contract,date);all.set(ticker+"|"+date,bars);barsCount+=bars.length;totalFiles++;}
  console.log("CONTRACT "+JSON.stringify({ticker,cachedUtcDates:dates.length,firstUtcDate:dates[0]??null,lastUtcDate:dates.at(-1)??null,bars:barsCount}));
 }
+if(totalFiles===0)throw Error("NO_MATCHING_CACHE_FILES: audit invalid; inspect filenames before interpreting coverage");
 const dates=[...new Set([...all.values()].flatMap(bars=>bars.map(b=>newYorkClock(b.timestampMs).date)))].sort();
 const eligible:{date:string;ticker:string}[]=[];
 const quarantined:{date:string;reason:string}[]=[];
