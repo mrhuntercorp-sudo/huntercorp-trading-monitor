@@ -25,7 +25,8 @@
     "audit:rollover-overnight": "node --import tsx src/scripts/massive-rollover-overnight-audit.ts",
     "audit:overnight-inventory": "node --import tsx src/scripts/massive-overnight-cache-inventory.ts",
     "recover:sunday-cache": "node --env-file=.env --import tsx src/scripts/massive-sunday-recovery.ts",
-    "study:overnight-levels": "node --import tsx src/scripts/massive-rollover-overnight-level-study.ts"
+    "study:overnight-levels": "node --import tsx src/scripts/massive-rollover-overnight-level-study.ts",
+    "study:dual-overnight": "node --import tsx src/scripts/massive-dual-contract-overnight.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
