@@ -32,7 +32,8 @@
     "study:nq-setup-baseline": "node --import tsx src/scripts/massive-nq-setup-baseline.ts",
     "study:stop-target-matrix": "node --import tsx src/scripts/massive-nq-stop-target-matrix.ts",
     "study:eod-mll-survival": "node --import tsx src/scripts/massive-nq-eod-mll-survival.ts",
-    "study:pattern-recognition": "node --import tsx src/scripts/massive-nq-pattern-recognition.ts"
+    "study:pattern-recognition": "node --import tsx src/scripts/massive-nq-pattern-recognition.ts",
+    "study:liquidity-sweeps": "node --import tsx src/scripts/massive-nq-liquidity-sweeps.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
