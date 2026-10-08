@@ -16,6 +16,10 @@ const cached=new CachedHistoricalDays({async getContractMinuteBars(c,from,to){
 }});
 
 const cycles=[
+ {name:"2025-12 Z5->H6",old:"NQZ5",next:"NQH6",reference:"2025-12-15",
+  dates:["2025-12-09","2025-12-10","2025-12-11","2025-12-12","2025-12-15","2025-12-16"]},
+ {name:"2026-03 H6->M6",old:"NQH6",next:"NQM6",reference:"2026-03-16",
+  dates:["2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-16","2026-03-17"]},
  {name:"2026-06 M6->U6",old:"NQM6",next:"NQU6",reference:"2026-06-15",
   dates:["2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-15","2026-06-16"]},
  {name:"2026-09 U6->Z6",old:"NQU6",next:"NQZ6",reference:"2026-09-14",
