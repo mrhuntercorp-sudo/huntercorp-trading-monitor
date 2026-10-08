@@ -33,7 +33,8 @@
     "study:stop-target-matrix": "node --import tsx src/scripts/massive-nq-stop-target-matrix.ts",
     "study:eod-mll-survival": "node --import tsx src/scripts/massive-nq-eod-mll-survival.ts",
     "study:pattern-recognition": "node --import tsx src/scripts/massive-nq-pattern-recognition.ts",
-    "study:liquidity-sweeps": "node --import tsx src/scripts/massive-nq-liquidity-sweeps.ts"
+    "study:liquidity-sweeps": "node --import tsx src/scripts/massive-nq-liquidity-sweeps.ts",
+    "audit:historical-coverage": "node --import tsx src/scripts/massive-nq-cache-coverage.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
