@@ -44,7 +44,9 @@ for(const c of cycles){
  const oldOffset=asOfOffset(events,priorTimestamp);
  const priorAdjusted=adjusted(priorRaw,events,priorTimestamp);
  const snapshot=events.map(e=>({cycle:e.cycle,at:e.effectiveMs,offset:asOfOffset(events,e.effectiveMs),raw:priorRaw,adjusted:adjusted(priorRaw,events,e.effectiveMs)}));
- const added={cycle:c.name,effectiveMs,points:assessment.priorSpreadPoints};
+ const spread=assessment.priorSpreadPoints;
+ if(spread===undefined)throw Error(c.name+": missing prior spread");
+ const added:Event={cycle:c.name,effectiveMs,points:spread};
  events.push(added);
  assert(asOfOffset(events,priorTimestamp)===oldOffset,c.name+": future roll leaked into prior timestamp");
  assert(adjusted(priorRaw,events,priorTimestamp)===priorAdjusted,c.name+": earlier adjusted price changed");
