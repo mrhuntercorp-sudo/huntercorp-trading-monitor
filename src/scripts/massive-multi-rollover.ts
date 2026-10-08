@@ -45,8 +45,17 @@ for(const cycle of cycles){
    const session=rth(bars,date);
    const present=new Set(session.map(b=>b.timestampMs));
    const missingTs:number[]=[];
-   const start=Date.parse(date+"T13:30:00Z");
-   for(let t=start;t<start+390*60000;t+=60000) if(!present.has(t)) missingTs.push(t);
+   // Build the expected RTH minute grid in New York time, including EST/EDT transitions.
+   const utcMidnight=Date.parse(date+"T00:00:00Z");
+   let expected=0;
+   for(let t=utcMidnight;t<utcMidnight+24*60*60000;t+=60000){
+    const clock=newYorkClock(t);
+    const minute=clock.hour*60+clock.minute;
+    if(clock.date!==date||minute<570||minute>=960) continue;
+    expected++;
+    if(!present.has(t)) missingTs.push(t);
+   }
+   if(expected!==390) throw new Error(`Unexpected RTH calendar coverage ${date}: ${expected}`);
    rows.push({ticker,volume:session.reduce((n,b)=>n+b.volume,0),missing:missingTs.length,missingTs});
   }
   const a=rows[0]!,b=rows[1]!;
