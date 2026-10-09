@@ -34,16 +34,22 @@ export function validateNqScheduleResponse(
   const intervals: ScheduleInterval[] = [];
   let open: string | null = null;
   let pendingPreOpen = false;
-  let last = -Infinity;
+  const parsed: Array<{ row: Record<string, unknown>; timestamp: string }> = [];
   for (const item of obj.results) {
     const row = record(item);
     if (row.product_code !== "NQ" || row.session_end_date !== expected.sessionEndDate ||
         row.trading_venue !== expected.tradingVenue) throw Error("SCHEDULE_IDENTITY_MISMATCH");
     if (row.event !== "pre_open" && row.event !== "open" && row.event !== "close") throw Error("SCHEDULE_UNSUPPORTED_EVENT");
     const timestamp = utcTimestamp(row.timestamp);
-    const current = Date.parse(timestamp);
-    if (current <= last) throw Error("SCHEDULE_EVENT_ORDER_INVALID");
-    last = current;
+    parsed.push({ row, timestamp });
+  }
+  // Provider response array order is not assumed to be chronological. Validate identity and timestamps first,
+  // then sort a private normalized copy; equal timestamps remain invalid because ordering is ambiguous.
+  parsed.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  for (let i = 1; i < parsed.length; i++) {
+    if (Date.parse(parsed[i]!.timestamp) <= Date.parse(parsed[i - 1]!.timestamp)) throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION");
+  }
+  for (const { row, timestamp } of parsed) {
     if (row.event === "pre_open") {
       if (open !== null || pendingPreOpen) throw Error("SCHEDULE_INVALID_PRE_OPEN");
       pendingPreOpen = true;
