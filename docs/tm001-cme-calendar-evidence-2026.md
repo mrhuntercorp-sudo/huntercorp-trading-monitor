@@ -32,3 +32,27 @@ CME holiday notes say September 6 pre-open orders carry Tuesday September 8 trad
 5. Only after checks, create a separate request/spend proposal; no automatic execution.
 
 Status: CME customary roll-date evidence verified; product-specific holiday hours and provider bar semantics NOT verified. Acquisition gate CLOSED.
+
+
+## Provider semantics — documented, no API calls
+
+Massive futures aggregate bars are trade-derived. If no trades occur within an interval, **no bar is emitted**. An absent minute bar is therefore not sufficient evidence of a failed historical download or corrupted cache. Do not synthesize zero-volume OHLC bars or auto-repair minute gaps without independent evidence.
+
+Massive futures schedules endpoint `GET /futures/v1/schedules` returns product/session-specific open and close times, intraday breaks and holiday adjustments in UTC. It supports historical schedule lookup (documentation says two years). Future integration must remain behind a separately authorized network/request gate. For now, use documentation only.
+
+Sources:
+- https://massive.com/docs/rest/futures/aggregates
+- https://massive.com/docs/rest/futures/overview
+- https://massive.com/knowledge-base/article/how-do-i-get-intraday-bars-for-a-futures-contract
+
+## Updated data quality classification contract (proposed; not yet implemented)
+
+- `CACHE_FILE_ABSENT`: UTC cache file not found; candidate for acquisition planning, not an approved request.
+- `UNEXPLAINED_BAR_ABSENCE`: expected exchange-open minute lacks a trade-derived bar; requires investigation, not automatically a provider failure.
+- `SCHEDULED_CLOSURE`: minute outside verified product-specific trading schedule; exclude from expected bars.
+- `SCHEDULE_UNVERIFIED`: holiday, early-close, or session transition lacks verified NQ schedule; fail closed for completeness approval.
+- `ROLLOVER_POLICY_REVIEW`: chosen contract transition must be documented and reproducible.
+
+Existing read-only repair manifests remain **provisional gap inventories** and must not be interpreted as verified API recovery needs.
+
+Next checkpoint: inspect existing audit contracts and introduce these classifications with offline tests before changing completeness decisions. No paid requests, data writes, or trades.
