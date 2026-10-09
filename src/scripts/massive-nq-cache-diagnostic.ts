@@ -61,7 +61,7 @@ async function main() {
   }
   const supplied = JSON.parse(await readFile(args[1]!, "utf8")) as unknown;
   const { intervals } = validateNqScheduleResponse(supplied, {
-    sessionEndDate: utcDate, tradingVenue: "CME",
+    sessionEndDate: utcDate, tradingVenue: "XCME",
   });
   // Require intervals to be fully contained within this UTC day.
   // Trade-date-spanning schedules must use a future multi-day adapter.
