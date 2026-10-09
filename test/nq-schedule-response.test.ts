@@ -35,12 +35,20 @@ test("rejects wrong product, trade date, or venue", () => {
     ] }), /SCHEDULE_IDENTITY_MISMATCH/);
   }
 });
-test("rejects duplicate or out-of-order events", () => {
-  const a = event("open", "2026-07-01T22:00:00Z");
-  assert.throws(() => validate({ status: "OK", results: [a, a] }), /SCHEDULE_EVENT_ORDER_INVALID/);
+test("sorts provider events chronologically but rejects timestamp collisions and impossible intervals", () => {
+  const output = validate({ status: "OK", results: [
+    event("close", "2026-07-02T21:00:00Z"),
+    event("open", "2026-07-01T22:00:00Z"),
+  ] });
+  assert.deepEqual(output.events.map(item => item.event), ["open", "close"]);
   assert.throws(() => validate({ status: "OK", results: [
-    event("open", "2026-07-02T22:00:00Z"), event("close", "2026-07-02T21:00:00Z"),
-  ] }), /SCHEDULE_EVENT_ORDER_INVALID/);
+    event("open", "2026-07-01T22:00:00Z"),
+    event("close", "2026-07-01T22:00:00Z"),
+  ] }), /SCHEDULE_EVENT_TIMESTAMP_COLLISION/);
+  assert.throws(() => validate({ status: "OK", results: [
+    event("close", "2026-07-01T21:00:00Z"),
+    event("open", "2026-07-01T22:00:00Z"),
+  ] }), /SCHEDULE_UNPAIRED_CLOSE/);
 });
 test("rejects pagination and invalid status", () => {
   assert.throws(() => validate({ ...regular(), next_url: "https://example.invalid/page2" }), /SCHEDULE_PAGINATION_UNHANDLED/);
