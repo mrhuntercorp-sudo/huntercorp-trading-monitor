@@ -86,3 +86,27 @@ test("pre_open must be followed by open and cannot occur while trading", () => {
     ...regular().results,
   ] }), /SCHEDULE_INVALID_PRE_OPEN/);
 });
+
+test("accepts +00:00 UTC schedule timestamps and normalizes to Z", () => {
+  const output = validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:30:00+00:00"),
+    event("open", "2026-07-01T22:00:00+00:00"),
+    event("close", "2026-07-02T21:00:00+00:00"),
+  ] });
+  assert.deepEqual(output.intervals, [{
+    openUtc: "2026-07-01T22:00:00.000Z",
+    closeUtc: "2026-07-02T21:00:00.000Z",
+  }]);
+});
+test("rejects nonzero offsets, invalid calendar values, and missing timezone", () => {
+  for (const timestamp of [
+    "2026-07-01T22:00:00-04:00",
+    "2026-07-01T22:00:00+01:00",
+    "2026-07-01T22:00:00",
+    "2026-02-30T22:00:00+00:00",
+  ]) {
+    assert.throws(() => validate({ status: "OK", results: [
+      event("open", timestamp), event("close", "2026-07-02T21:00:00Z"),
+    ] }), /INVALID_UTC_TIMESTAMP/);
+  }
+});
