@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { validateNqScheduleResponse } from "../src/research/nq-schedule-response.js";
 
-const expected = { sessionEndDate: "2026-07-02", tradingVenue: "CME" };
+const expected = { sessionEndDate: "2026-07-02", tradingVenue: "XCME" };
 const event = (name: string, timestamp: string, overrides: Record<string, unknown> = {}) =>
   ({ event: name, timestamp, product_code: "NQ", session_end_date: expected.sessionEndDate,
      trading_venue: expected.tradingVenue, ...overrides });
