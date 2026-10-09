@@ -47,7 +47,13 @@ export function validateNqScheduleResponse(
   // then sort a private normalized copy; equal timestamps remain invalid because ordering is ambiguous.
   parsed.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
   for (let i = 1; i < parsed.length; i++) {
-    if (Date.parse(parsed[i]!.timestamp) <= Date.parse(parsed[i - 1]!.timestamp)) throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION");
+    if (parsed[i]!.timestamp === parsed[i - 1]!.timestamp) {
+      const timestamp = parsed[i]!.timestamp;
+      const collidingEvents = parsed.filter(item => item.timestamp === timestamp)
+        .map(item => item.row.event as ScheduleEvent["event"]).sort();
+      // Validated event names and normalized UTC time only; no raw response or credentials.
+      throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION " + JSON.stringify({ timestamp, events: collidingEvents }));
+    }
   }
   for (const { row, timestamp } of parsed) {
     if (row.event === "pre_open") {
