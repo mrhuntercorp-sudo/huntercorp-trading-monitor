@@ -55,7 +55,21 @@ export function validateNqScheduleResponse(
       const classification = collidingEvents.every(event => event === "pre_open")
         ? "DUPLICATE_PRE_OPEN_TIMESTAMP_REVIEW"
         : "MIXED_OR_OTHER_TIMESTAMP_COLLISION_REVIEW";
-      throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION " + JSON.stringify({ timestamp, events: collidingEvents, classification }));
+      const collidingRows = parsed.filter(item => item.timestamp === timestamp);
+      // Compare documented identity fields only, after UTC normalization. This does not
+      // prove full raw-record identity: additional provider metadata may differ.
+      const identities = collidingRows.map(item => JSON.stringify({
+        event: item.row.event,
+        productCode: item.row.product_code,
+        sessionEndDate: item.row.session_end_date,
+        tradingVenue: item.row.trading_venue,
+        timestamp: item.timestamp,
+      }));
+      const documentedIdentityEqual = new Set(identities).size === 1;
+      throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION " + JSON.stringify({
+        timestamp, events: collidingEvents, classification,
+        documentedIdentityEqual, rawRecordIdentityVerified: false,
+      }));
     }
   }
   for (const { row, timestamp } of parsed) {
