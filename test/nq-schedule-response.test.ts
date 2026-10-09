@@ -132,6 +132,8 @@ test("collision diagnostic reports only normalized timestamp and validated event
       timestamp: "2026-07-01T22:00:00.000Z",
       events: ["open", "pre_open"],
       classification: "MIXED_OR_OTHER_TIMESTAMP_COLLISION_REVIEW",
+      documentedIdentityEqual: false,
+      rawRecordIdentityVerified: false,
     });
     return true;
   });
@@ -150,7 +152,25 @@ test("identical pre_open timestamps receive review classification and remain rej
       timestamp: "2026-07-01T21:45:00.000Z",
       events: ["pre_open", "pre_open"],
       classification: "DUPLICATE_PRE_OPEN_TIMESTAMP_REVIEW",
+      documentedIdentityEqual: true,
+      rawRecordIdentityVerified: false,
     });
+    return true;
+  });
+});
+
+test("additional provider metadata cannot establish raw-record identity", () => {
+  assert.throws(() => validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:45:00Z", { provider_note: "first" }),
+    event("pre_open", "2026-07-01T21:45:00Z", { provider_note: "second" }),
+    ...regular().results,
+  ] }), error => {
+    assert.ok(error instanceof Error);
+    const detail = JSON.parse(error.message.slice("SCHEDULE_EVENT_TIMESTAMP_COLLISION ".length));
+    assert.equal(detail.documentedIdentityEqual, true);
+    assert.equal(detail.rawRecordIdentityVerified, false);
+    assert.equal(detail.classification, "DUPLICATE_PRE_OPEN_TIMESTAMP_REVIEW");
+    assert.doesNotMatch(error.message, /provider_note|first|second/);
     return true;
   });
 });
