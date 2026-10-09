@@ -1,14 +1,14 @@
 import { validateNqScheduleResponse } from "../research/nq-schedule-response.js";
 
 const DATE = "2026-09-11";
-const URL = "https://api.massive.com/futures/v1/schedules";
+const SCHEDULE_ENDPOINT = "https://api.massive.com/futures/v1/schedules";
 const key = process.env.MASSIVE_API_KEY?.trim();
 if (!key) throw Error("MASSIVE_API_KEY_MISSING: set it locally in .env");
 if (process.argv.length !== 3 || process.argv[2] !== "--execute-one-approved-request") {
   throw Error("EXPLICIT_EXECUTION_FLAG_REQUIRED: --execute-one-approved-request");
 }
 
-const url = new URL(URL);
+const url = new URL(SCHEDULE_ENDPOINT);
 url.searchParams.set("product_code", "NQ");
 url.searchParams.set("session_end_date", DATE);
 const controller = new AbortController();
