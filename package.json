@@ -40,7 +40,8 @@
     "audit:recovery-safety-gate": "node --import tsx src/scripts/massive-nq-recovery-safety-gate.ts",
     "recover:nq-one-request": "node --import tsx src/scripts/massive-nq-one-request-recovery.ts",
     "plan:nq-backfill": "node --import tsx src/scripts/massive-nq-backfill-plan.ts",
-    "test:nq-backfill-safety": "node --import tsx src/scripts/massive-nq-backfill-safety.ts"
+    "test:nq-backfill-safety": "node --import tsx src/scripts/massive-nq-backfill-safety.ts",
+    "test:nq-paced-transport": "node --import tsx --test test/nq-paced-transport.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
