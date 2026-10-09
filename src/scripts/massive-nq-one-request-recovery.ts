@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { MinuteBar } from "../market/types.js";
 
-const ticker="NQZ6", date="2026-09-17";
+const ticker="NQZ6", date="2026-09-18";
 const root="data/cache/massive/NQ";
 const path=join(root,ticker,date+".json");
 const live=process.argv.includes("--execute");
@@ -17,7 +17,7 @@ catch(error){if((error as NodeJS.ErrnoException).code!=="ENOENT")throw error;}
 const url=new URL("/futures/v1/aggs/NQZ6","https://api.massive.com");
 url.searchParams.set("resolution","1min");
 url.searchParams.set("window_start.gte",date);
-url.searchParams.set("window_start.lt","2026-09-18");
+url.searchParams.set("window_start.lt","2026-09-19");
 url.searchParams.set("limit","50000");
 url.searchParams.set("sort","window_start.asc");
 url.searchParams.set("apiKey",key);
