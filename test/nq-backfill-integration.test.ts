@@ -21,7 +21,7 @@ test("executor uses paced transport across three sequential requests", async () 
   let now = 0;
   const starts: number[] = [];
   const clock: Clock = { now: () => now, wait: async ms => { now += ms; } };
-  const transport = pacedTransport(async target => { starts.push(now); return fixture(target); }, { intervalMs: 15000, maxRequests: 3, clock });
+  const transport = pacedTransport(async (target: { ticker: string; date: string }) => { starts.push(now); return fixture(target); }, { intervalMs: 15000, maxRequests: 3, clock });
   const result = await executeBoundedBackfill({ targets, maxRequests: 3, transport, persist: false, cacheRoot: root });
   assert.deepEqual(starts, [0, 15000, 30000]);
   assert.deepEqual(result, { requests: 3, validated: 3, written: 0 });
@@ -29,7 +29,7 @@ test("executor uses paced transport across three sequential requests", async () 
 
 test("provider failure stops executor without reaching next target", async () => tempRoot(async root => {
   let calls = 0;
-  const transport = pacedTransport(async target => {
+  const transport = pacedTransport(async (target: { ticker: string; date: string }) => {
     calls++;
     if (calls === 2) throw Error("HTTP_429");
     return fixture(target);
@@ -40,7 +40,7 @@ test("provider failure stops executor without reaching next target", async () =>
 
 test("request budget rejects before any integrated transport call", async () => tempRoot(async root => {
   let calls = 0;
-  const transport = pacedTransport(async target => { calls++; return fixture(target); }, { intervalMs: 15000, maxRequests: 2 });
+  const transport = pacedTransport(async (target: { ticker: string; date: string }) => { calls++; return fixture(target); }, { intervalMs: 15000, maxRequests: 2 });
   await assert.rejects(executeBoundedBackfill({ targets, maxRequests: 2, transport, persist: false, cacheRoot: root }), /BUDGET_EXCEEDED_BEFORE_START/);
   assert.equal(calls, 0);
 }));
