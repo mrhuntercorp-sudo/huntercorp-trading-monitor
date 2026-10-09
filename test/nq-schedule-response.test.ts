@@ -51,10 +51,38 @@ test("rejects invalid UTC timestamps and unknown events", () => {
     event("open", "2026-07-01T25:00:00Z"), event("close", "2026-07-02T21:00:00Z"),
   ] }), /INVALID_UTC_TIMESTAMP/);
   assert.throws(() => validate({ status: "OK", results: [
-    event("pre_open", "2026-07-01T21:00:00Z"), ...regular().results,
+    event("halt", "2026-07-01T21:00:00Z"), ...regular().results,
   ] }), /SCHEDULE_UNSUPPORTED_EVENT/);
 });
 test("rejects malformed or empty payload", () => {
   assert.throws(() => validate(null), /INVALID_SCHEDULE_OBJECT/);
   assert.throws(() => validate({ status: "OK", results: [] }), /SCHEDULE_RESULTS_MISSING/);
+});
+
+test("pre_open is metadata and does not expand trading intervals", () => {
+  const output = validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:30:00Z"),
+    event("open", "2026-07-01T22:00:00Z"),
+    event("close", "2026-07-02T21:00:00Z"),
+  ] });
+  assert.equal(output.events.length, 3);
+  assert.deepEqual(output.intervals, [{
+    openUtc: "2026-07-01T22:00:00.000Z",
+    closeUtc: "2026-07-02T21:00:00.000Z",
+  }]);
+});
+test("pre_open must be followed by open and cannot occur while trading", () => {
+  assert.throws(() => validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:00:00Z"),
+  ] }), /SCHEDULE_UNPAIRED_PRE_OPEN/);
+  assert.throws(() => validate({ status: "OK", results: [
+    event("open", "2026-07-01T22:00:00Z"),
+    event("pre_open", "2026-07-01T22:30:00Z"),
+    event("close", "2026-07-02T21:00:00Z"),
+  ] }), /SCHEDULE_INVALID_PRE_OPEN/);
+  assert.throws(() => validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:00:00Z"),
+    event("pre_open", "2026-07-01T21:30:00Z"),
+    ...regular().results,
+  ] }), /SCHEDULE_INVALID_PRE_OPEN/);
 });
