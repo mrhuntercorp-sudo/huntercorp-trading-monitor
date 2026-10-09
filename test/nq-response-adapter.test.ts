@@ -22,7 +22,7 @@ test("accepts optional per-bar ticker and feeds executor without network", async
 test("rejects ticker mismatch, pagination and missing session date", () => {
   assert.throws(() => normalizeMassiveResponse(target, { results: [{ ...bar, ticker: "NQZ6" }] }), /TICKER_MISMATCH/);
   assert.throws(() => normalizeMassiveResponse(target, { results: [bar], next_url: "https://example.com/next" }), /PAGINATION_REQUIRED/);
-  assert.throws(() => normalizeMassiveResponse(target, { results: [{ ...bar, session_end_date: undefined }] }), /INVALID_SESSION_END_DATE/);
+  assert.throws(() => normalizeMassiveResponse(target, { results: [{ window_start: bar.window_start, open: bar.open, high: bar.high, low: bar.low, close: bar.close, volume: bar.volume }] }), /INVALID_SESSION_END_DATE/);
 });
 
 test("rejects out-of-day timestamps and invalid OHLCV", () => {
