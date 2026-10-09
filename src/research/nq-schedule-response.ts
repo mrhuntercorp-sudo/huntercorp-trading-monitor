@@ -63,7 +63,7 @@ export function validateNqScheduleResponse(
       open = null;
     }
     events.push({
-      event: row.event, productCode: "NQ",
+      event: row.event as ScheduleEvent["event"], productCode: "NQ",
       sessionEndDate: expected.sessionEndDate,
       timestamp, tradingVenue: expected.tradingVenue,
     });
