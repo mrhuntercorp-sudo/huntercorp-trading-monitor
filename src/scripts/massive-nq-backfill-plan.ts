@@ -1,16 +1,17 @@
+import { provisionalClosedDates, provisionalNqContract, isProvisionalRoll } from "./massive-nq-calendar-policy.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = "data/cache/massive/NQ";
 const end = "2026-10-02";
 const windows = [20, 60, 90] as const;
-const closed = new Set(["2026-07-03", "2026-09-07"]);
+const closed = provisionalClosedDates;
 const msDay = 86_400_000;
 const dateOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const dateMs = (date: string) => Date.parse(date + "T00:00:00Z");
 const cache = new Map<string, Set<string>>();
 
-for (const ticker of ["NQU6", "NQZ6"]) {
+for (const ticker of ["NQM6", "NQU6", "NQZ6"]) {
   let names: string[];
   try { names = await readdir(join(root, ticker)); }
   catch (error) {
@@ -32,13 +33,13 @@ for (const window of windows) {
   const missing = new Map<string, { ticker: string; utcDate: string }>();
   const rolloverReview: string[] = [];
   const dates = selected.map(date => {
-    const ticker = date < "2026-09-14" ? "NQU6" : "NQZ6";
-    if (date === "2026-09-14") rolloverReview.push(date);
+    const ticker = provisionalNqContract(date);
+    if (isProvisionalRoll(date)) rolloverReview.push(date);
     const previous = dateOf(dateMs(date) - msDay);
     const required = [previous, date];
     const absent = required.filter(utcDate => !cache.get(ticker)!.has(utcDate));
     for (const utcDate of absent) missing.set(ticker + ":" + utcDate, { ticker, utcDate });
-    return { date, ticker, missingUtcDates: absent, rolloverReview: date === "2026-09-14" };
+    return { date, ticker, missingUtcDates: absent, rolloverReview: isProvisionalRoll(date) };
   });
   console.log("BACKFILL_WINDOW " + JSON.stringify({
     tradingSessions: window,
@@ -51,11 +52,13 @@ for (const window of windows) {
     accountEntitlementsVerified: false,
     rateLimitVerified: false,
     holidayCalendarVerified: false,
+    provisionalHolidayExclusions: [...closed],
+    provisionalRollDates: ["2026-06-15", "2026-09-14"],
     rolloverPolicyApproved: false,
     approvedRequests: 0,
     approvedSpendUsd: 0,
     liveRecoveryEnabled: false,
-    warning: "File presence is not session completeness. Existing files require integrity and session coverage audits; no live acquisition allowed."
+    warning: "Provisional holiday exclusions and roll dates are NOT verified. File presence is not session completeness; no live acquisition allowed."
   }));
   if (window === 20) console.log("TWENTY_DAY_SESSION_PLAN " + JSON.stringify(dates));
 }
