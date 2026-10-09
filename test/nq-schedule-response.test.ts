@@ -118,3 +118,20 @@ test("rejects nonzero offsets, invalid calendar values, and missing timezone", (
     ] }), /INVALID_UTC_TIMESTAMP/);
   }
 });
+
+test("collision diagnostic reports only normalized timestamp and validated event names", () => {
+  assert.throws(() => validate({ status: "OK", results: [
+    event("close", "2026-07-02T21:00:00Z"),
+    event("open", "2026-07-01T22:00:00Z"),
+    event("pre_open", "2026-07-01T22:00:00+00:00"),
+  ] }), error => {
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /^SCHEDULE_EVENT_TIMESTAMP_COLLISION /);
+    const detail = JSON.parse(error.message.slice("SCHEDULE_EVENT_TIMESTAMP_COLLISION ".length));
+    assert.deepEqual(detail, {
+      timestamp: "2026-07-01T22:00:00.000Z",
+      events: ["open", "pre_open"],
+    });
+    return true;
+  });
+});
