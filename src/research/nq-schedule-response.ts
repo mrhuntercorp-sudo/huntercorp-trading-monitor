@@ -52,7 +52,10 @@ export function validateNqScheduleResponse(
       const collidingEvents = parsed.filter(item => item.timestamp === timestamp)
         .map(item => item.row.event as ScheduleEvent["event"]).sort();
       // Validated event names and normalized UTC time only; no raw response or credentials.
-      throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION " + JSON.stringify({ timestamp, events: collidingEvents }));
+      const classification = collidingEvents.every(event => event === "pre_open")
+        ? "DUPLICATE_PRE_OPEN_TIMESTAMP_REVIEW"
+        : "MIXED_OR_OTHER_TIMESTAMP_COLLISION_REVIEW";
+      throw Error("SCHEDULE_EVENT_TIMESTAMP_COLLISION " + JSON.stringify({ timestamp, events: collidingEvents, classification }));
     }
   }
   for (const { row, timestamp } of parsed) {
