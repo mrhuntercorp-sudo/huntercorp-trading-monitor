@@ -9,7 +9,7 @@ const path=join(root,ticker,date+".json");
 const live=process.argv.includes("--execute");
 const key=process.env.MASSIVE_API_KEY?.trim();
 console.log("=== TM001 ONE-REQUEST NQZ6 RECOVERY ===");
-console.log("TARGET NQZ6 2026-09-16 UTC | NO RETRIES | NO PAGINATION | NO SPEND AUTHORITY");
+console.log(`TARGET ${ticker} ${date} UTC | NO RETRIES | NO PAGINATION | NO SPEND AUTHORITY`);
 if(!live){console.log("DRY_RUN: no API calls, no writes; pass --execute after approval");process.exit(0);}
 if(!key)throw Error("MASSIVE_API_KEY missing; no request made");
 try{await readFile(path,"utf8");throw Error("CACHE_ALREADY_EXISTS: refusing overwrite or request");}
