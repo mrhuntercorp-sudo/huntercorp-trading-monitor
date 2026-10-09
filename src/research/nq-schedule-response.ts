@@ -1,5 +1,5 @@
 export type ScheduleEvent = {
-  event: "open" | "close";
+  event: "pre_open" | "open" | "close";
   productCode: "NQ";
   sessionEndDate: string;
   timestamp: string;
@@ -33,17 +33,22 @@ export function validateNqScheduleResponse(
   const events: ScheduleEvent[] = [];
   const intervals: ScheduleInterval[] = [];
   let open: string | null = null;
+  let pendingPreOpen = false;
   let last = -Infinity;
   for (const item of obj.results) {
     const row = record(item);
     if (row.product_code !== "NQ" || row.session_end_date !== expected.sessionEndDate ||
         row.trading_venue !== expected.tradingVenue) throw Error("SCHEDULE_IDENTITY_MISMATCH");
-    if (row.event !== "open" && row.event !== "close") throw Error("SCHEDULE_UNSUPPORTED_EVENT");
+    if (row.event !== "pre_open" && row.event !== "open" && row.event !== "close") throw Error("SCHEDULE_UNSUPPORTED_EVENT");
     const timestamp = utcTimestamp(row.timestamp);
     const current = Date.parse(timestamp);
     if (current <= last) throw Error("SCHEDULE_EVENT_ORDER_INVALID");
     last = current;
-    if (row.event === "open") {
+    if (row.event === "pre_open") {
+      if (open !== null || pendingPreOpen) throw Error("SCHEDULE_INVALID_PRE_OPEN");
+      pendingPreOpen = true;
+    } else if (row.event === "open") {
+      pendingPreOpen = false;
       if (open !== null) throw Error("SCHEDULE_UNPAIRED_OPEN");
       open = timestamp;
     } else {
@@ -57,6 +62,7 @@ export function validateNqScheduleResponse(
       timestamp, tradingVenue: expected.tradingVenue,
     });
   }
+  if (pendingPreOpen) throw Error("SCHEDULE_UNPAIRED_PRE_OPEN");
   if (open !== null || intervals.length === 0) throw Error("SCHEDULE_UNPAIRED_OPEN");
   return { events, intervals };
 }
