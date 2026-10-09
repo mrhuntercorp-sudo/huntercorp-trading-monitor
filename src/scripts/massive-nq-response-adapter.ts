@@ -17,7 +17,7 @@ export function normalizeMassiveResponse(target: BackfillTarget, payload: RawMas
     results: payload.results.map(bar => {
       if (bar.ticker && bar.ticker !== target.ticker) throw Error("TICKER_MISMATCH");
       if (typeof bar.session_end_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(bar.session_end_date)) throw Error("INVALID_SESSION_END_DATE");
-      if (typeof bar.window_start !== "number" || !Number.isSafeInteger(bar.window_start)) throw Error("INVALID_WINDOW_START");
+      if (typeof bar.window_start !== "number" || !Number.isFinite(bar.window_start) || bar.window_start < 0) throw Error("INVALID_WINDOW_START");
       const timestampMs = Math.floor(bar.window_start / 1000000);
       if (!Number.isSafeInteger(timestampMs) || timestampMs < start || timestampMs >= start + 86400000 || timestampMs % 60000 !== 0) throw Error("INVALID_TIMESTAMP");
       const values = [bar.open, bar.high, bar.low, bar.close, bar.volume];
