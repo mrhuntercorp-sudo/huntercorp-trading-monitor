@@ -131,6 +131,25 @@ test("collision diagnostic reports only normalized timestamp and validated event
     assert.deepEqual(detail, {
       timestamp: "2026-07-01T22:00:00.000Z",
       events: ["open", "pre_open"],
+      classification: "MIXED_OR_OTHER_TIMESTAMP_COLLISION_REVIEW",
+    });
+    return true;
+  });
+});
+
+test("identical pre_open timestamps receive review classification and remain rejected", () => {
+  assert.throws(() => validate({ status: "OK", results: [
+    event("pre_open", "2026-07-01T21:45:00Z"),
+    event("pre_open", "2026-07-01T21:45:00+00:00"),
+    ...regular().results,
+  ] }), error => {
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /^SCHEDULE_EVENT_TIMESTAMP_COLLISION /);
+    const detail = JSON.parse(error.message.slice("SCHEDULE_EVENT_TIMESTAMP_COLLISION ".length));
+    assert.deepEqual(detail, {
+      timestamp: "2026-07-01T21:45:00.000Z",
+      events: ["pre_open", "pre_open"],
+      classification: "DUPLICATE_PRE_OPEN_TIMESTAMP_REVIEW",
     });
     return true;
   });
