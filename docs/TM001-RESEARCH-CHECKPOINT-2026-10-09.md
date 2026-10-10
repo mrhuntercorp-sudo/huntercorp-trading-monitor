@@ -69,3 +69,10 @@ Objective: make the risk simulation internally consistent, remove misleading rep
 - [ ] **LATER:** pre-NY 9:20–9:25 briefing, all-session alerts, GC expansion. No live order execution.
 
 Finish line tonight: P0 + P1 verified, P2 specified, P3 only if time/data supports it. Any item only becomes [x] after evidence from local test output.
+
+## EOD account / risk-budget clarification — 2026-10-10
+- User confirms Topstep **EOD trailing** account type and intention to risk only a **portion** of the account's allowable drawdown, not the full MLL.
+- Preserve provisional internal controls already agreed: operating loss budget 50% of MLL ($1,000/$1,500), daily budget 15% of MLL ($300/$450). These are internal safeguards, **not** official Topstep rules or confirmed optimal values.
+- EOD trailing means the MLL floor recalculates from completed EOD balances, **not** intraday equity peaks. Intraday open-position losses still matter for touching the already-established floor. Do not equate EOD trailing with ignoring intraday breaches.
+- Keep separate modeled threshold-exit cushion vs full minute-bar stress envelope; one-minute OHLC does not prove achievable exits or event order.
+- Risk budgets constrain the strategy; they do not create a profitable edge. Validate each proposed strategy independently.
