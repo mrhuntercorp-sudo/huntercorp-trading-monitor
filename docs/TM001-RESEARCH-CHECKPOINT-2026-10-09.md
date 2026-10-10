@@ -76,3 +76,10 @@ Finish line tonight: P0 + P1 verified, P2 specified, P3 only if time/data suppor
 - EOD trailing means the MLL floor recalculates from completed EOD balances, **not** intraday equity peaks. Intraday open-position losses still matter for touching the already-established floor. Do not equate EOD trailing with ignoring intraday breaches.
 - Keep separate modeled threshold-exit cushion vs full minute-bar stress envelope; one-minute OHLC does not prove achievable exits or event order.
 - Risk budgets constrain the strategy; they do not create a profitable edge. Validate each proposed strategy independently.
+
+## October 10 — integrated uncertainty test evidence
+- User pulled commit `295ba4b`; TypeScript GREEN, isolated uncertainty regression **14/14 GREEN**, integrated cached EOD simulation completed.
+- All 12 integrated scenario rows show `executionOrderUnresolved=true`, with 2–3 `stopRiskCollisionBars` per scenario, no gap-through-stop or gap-through-risk flags in this historical sample. These counters are diagnostics, **not a verified intrabar event-order solution**.
+- 2 NQ / $2k MLL worst-bar stress remains `MLL_TOUCH` on 2026-08-24, minimum stress cushion -$440; threshold proxy assumes ideal threshold exit, and is not executable-fill evidence.
+- P0a and isolated P0b regression verified; P0c **diagnostic integration verified**, but execution-order resolution and conservative fill model remain open research limitations. P1 legacy report cleanup verified.
+- Next: P2 define a fair, common NQ strategy-comparison contract and reproducible scorecard. Ensure every candidate retains an explicit uncertainty/not-certified status, use partial-MLL budgets, and keep unseen evaluation data untouched. No extra API/spend without approval.
