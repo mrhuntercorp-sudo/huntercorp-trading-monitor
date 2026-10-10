@@ -28,9 +28,9 @@ async function barsFor(ticker: string, utcDate: string): Promise<MinuteBar[]> {
   loaded.set(id, bars);
   return bars;
 }
-console.log("=== TM001 SESSION-AWARE BACKFILL REVIEW ===");
+console.log("=== TM001 30/60/90 SESSION-AWARE BACKFILL REVIEW ===");
 console.log("READ ONLY | CACHE ONLY | NO API | NO WRITES | NO TRADES");
-for (const window of [20, 60, 90] as const) {
+for (const window of [30, 60, 90] as const) {
   const plan = await planMissingNqFiles({ end, tradingSessions: window, cacheRoot: root });
   const dates: string[] = [];
   for (let t = dateMs(end); dates.length < window; t -= dayMs) {
