@@ -37,7 +37,13 @@ test("VOL_COMPRESSION_BREAKOUT_NEXT_OPEN",()=>{
 test("VOL_COMPRESSION_CHASE_REJECTED",()=>{
  const b=Array.from({length:45},(_,i)=>mk(i,100,101,99,100));
  b[35]=mk(35,100,106,99,105);b[36]=mk(36,112,113,111,112);
- assert.deepEqual(generateP4Signals(session(b),"VOLATILITY_COMPRESSION_EXPANSION_V1"),[]);
+ assert.deepEqual(generateP4Signals(session(b.slice(0,37)),"VOLATILITY_COMPRESSION_EXPANSION_V1"),[]);
+});
+test("VOL_COMPRESSION_LATER_INDEPENDENT_SIGNAL",()=>{
+ const b=Array.from({length:45},(_,i)=>mk(i,100,101,99,100));
+ b[35]=mk(35,100,106,99,105);b[36]=mk(36,112,113,111,112);
+ const x=generateP4Signals(session(b),"VOLATILITY_COMPRESSION_EXPANSION_V1");
+ assert.equal(x.length,1);assert.equal(x[0]!.signalTime,b[36]!.timestampMs);assert.equal(x[0]!.entryTime,b[37]!.timestampMs);
 });
 test("TREND_PULLBACK_LONG_NEXT_OPEN",()=>{
  const b=Array.from({length:55},(_,i)=>mk(i,100,101,99,100));
