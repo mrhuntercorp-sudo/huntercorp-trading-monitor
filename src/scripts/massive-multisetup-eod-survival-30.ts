@@ -73,7 +73,7 @@ function crossing(entryEquity:number,adverseEquity:number,levels:{name:Trigger;l
 }
 const ordered=[...signals].sort((a,b)=>a.entryTime-b.entryTime);
 console.log("INTEGRATED_ASSUMPTIONS "+JSON.stringify({signals:ordered.length,startingBalanceUsd:50000,startingBalanceIllustrative:true,positions:sizes,thresholdModes:["THRESHOLD_PROXY","WORST_BAR_STRESS"],dailyBudgetFractionOfMll:.15,operatingBudgetFractionOfMll:.5,operatingFloor:"EOD_HIGH_MINUS_HALF_MLL_INTERNAL_ONLY",mllFloor:"MIN(START,EOD_HIGH_MINUS_MLL)",dailyFloor:"DAY_START_MINUS_15_PERCENT_MLL",slippageTicksPerSide:3,commissionUnverified:true,limitations:"Minute OHLC cannot order target, stop and risk crossings within the same minute. Threshold proxy assumes execution exactly at limit; stress assumes worst bar extreme. Neither is a tradable fill prediction. Signal selection is independent of risk halts. In-sample only; no account certification."}));
-for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
+for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
  const start=50000,friction=size.commission+size.slippage;
  let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
  let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
