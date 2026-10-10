@@ -1,3 +1,4 @@
+import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
 import { overnightBars } from "../research/session-features.js";
@@ -141,6 +142,20 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
   if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
  if(currentDate)highEod=Math.max(highEod,balance);
+ const scorecard:StrategyScorecard={
+  strategyId:"EXPLORATORY_10BAR_SWEEP_BREAKOUT_COMBINED",strategyVersion:"v0-in-sample",
+  position:size.label,mllUsd:mll,fillMode:mode,
+  candidateSessions:dates.length,eligibleSessions:byDate.size,signals:ordered.length,executed,skipped,pretradeRejects,
+  netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),
+  minimumModeledEodMllCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),
+  stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,
+  executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,
+  accountProfitTargetNotModeled:true,fillCertified:false,outOfSampleValidated:false,
+  researchStatus:firstMllTouch||firstOperatingStop?"REJECT":"RESEARCH_MORE"
+ };
+ const scorecardErrors=validateScorecard(scorecard);
+ if(scorecardErrors.length)throw Error("SCORECARD_VALIDATION_FAILED "+JSON.stringify({position:size.label,mll,mode,errors:scorecardErrors}));
+ console.log("STRATEGY_SCORECARD "+JSON.stringify(scorecard));
  console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
 console.log("TM001 INTEGRATED EOD SCREEN COMPLETE | CACHE ONLY | ZERO TRADES | NOT CERTIFIED");
