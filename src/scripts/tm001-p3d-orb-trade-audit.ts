@@ -96,7 +96,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   const idx=bars.findIndex(b=>b.timestampMs===t.entryTime);
   if(idx<0)throw Error("MISSING_ENTRY "+t.date);
   const sign=t.direction==="LONG"?1:-1;
-  let exit=t.exit,reason=t.exitReason;
+  let exit=t.exit,reason=t.exitReason,actualExitTime=t.exitTime;
   const entryEquity=balance-friction;
   // Price risk is evaluated through the independent stop/target exit minute.
   // If the threshold and strategy exit share a bar, ordering is unknowable.
@@ -124,12 +124,13 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
    // These flags report uncertainty only: the proxy still cannot determine the intrabar path or executable fill.
    if(b.timestampMs===t.exitTime||stopRiskCollision||stopTargetCollision||gapThroughStop||gapThroughRisk)ambiguousRiskBars++;
    exit=mode==="THRESHOLD_PROXY"?riskPrice:worst;
+   actualExitTime=b.timestampMs;
    reason=crossed.name;
    break;
   }
   const pnl=(exit-t.entry)*sign*size.usdPerPoint-friction;
   balance+=pnl;executed++;
-  if(strategy==="ORB_RETEST_V1"&&size.label==="5_MNQ"&&mll===3000&&mode==="THRESHOLD_PROXY")auditTrades.push({date:t.date,direction:t.direction,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(t.exitTime).toISOString(),entry:t.entry,exit,exitReason:reason,grossUsd:money((exit-t.entry)*sign*size.usdPerPoint),costUsd:friction,netUsd:money(pnl),holdingMinutes:(t.exitTime-t.entryTime)/60000,stopTargetCollision:t.ambiguous});
+  if(strategy==="ORB_RETEST_V1"&&size.label==="5_MNQ"&&mll===3000&&mode==="THRESHOLD_PROXY")auditTrades.push({date:t.date,direction:t.direction,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(actualExitTime).toISOString(),entry:t.entry,exit,exitReason:reason,grossUsd:money((exit-t.entry)*sign*size.usdPerPoint),costUsd:friction,netUsd:money(pnl),holdingMinutes:(actualExitTime-t.entryTime)/60000,stopTargetCollision:t.ambiguous});
   peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
   if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
   else if(reason==="OPERATING"){firstOperatingStop=t.date;haltToday=true;}
@@ -158,7 +159,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   const wins=auditTrades.filter(t=>t.netUsd>0),losses=auditTrades.filter(t=>t.netUsd<0),flat=auditTrades.filter(t=>t.netUsd===0);
   const sum=money(auditTrades.reduce((n,t)=>n+t.netUsd,0));
   if(auditTrades.length!==executed||sum!==scorecard.netUsd)throw Error("P3D_AUDIT_RECONCILIATION_FAILED");
-  console.log("P3D_AUDIT_SUMMARY "+JSON.stringify({strategy,position:size.label,mllUsd:mll,fillMode:mode,executed,wins:wins.length,losses:losses.length,flat:flat.length,winRate:executed?wins.length/executed:null,grossUsd:money(auditTrades.reduce((n,t)=>n+t.grossUsd,0)),totalCostsUsd:money(auditTrades.reduce((n,t)=>n+t.costUsd,0)),netUsd:sum,avgNetUsd:executed?money(sum/executed):null,stopTargetCollisions:auditTrades.filter(t=>t.stopTargetCollision).length,exitReasons:Object.fromEntries([...new Set(auditTrades.map(t=>t.exitReason))].map(k=>[k,auditTrades.filter(t=>t.exitReason===k).length])),limitations:"Historical OHLC proxy; exit timestamp is strategy exit time and may differ from risk threshold crossing time; not certified fills"}));
+  console.log("P3D_AUDIT_SUMMARY "+JSON.stringify({strategy,position:size.label,mllUsd:mll,fillMode:mode,executed,wins:wins.length,losses:losses.length,flat:flat.length,winRate:executed?wins.length/executed:null,grossUsd:money(auditTrades.reduce((n,t)=>n+t.grossUsd,0)),totalCostsUsd:money(auditTrades.reduce((n,t)=>n+t.costUsd,0)),netUsd:sum,avgNetUsd:executed?money(sum/executed):null,stopTargetCollisions:auditTrades.filter(t=>t.stopTargetCollision).length,exitReasons:Object.fromEntries([...new Set(auditTrades.map(t=>t.exitReason))].map(k=>[k,auditTrades.filter(t=>t.exitReason===k).length])),limitations:"Historical OHLC proxy; not certified fills"}));
   for(const t of auditTrades)console.log("P3D_AUDIT_TRADE "+JSON.stringify(t));
  }
  console.log("STRATEGY_SCORECARD "+JSON.stringify(scorecard));
