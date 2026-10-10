@@ -77,7 +77,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
  const start=50000,friction=size.commission+size.slippage;
  let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
  let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
- let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,minObservedWorstBarCushion=mll,ambiguousRiskBars=0,stopTargetCollisionBars=0,stopRiskCollisionBars=0,gapThroughStopBars=0,gapThroughRiskBars=0,pretradeRejects=0;
+ let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion:number=mll,minObservedWorstBarCushion:number=mll,ambiguousRiskBars=0,stopTargetCollisionBars=0,stopRiskCollisionBars=0,gapThroughStopBars=0,gapThroughRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
   if(t.date!==currentDate){
    if(currentDate)highEod=Math.max(highEod,balance);
