@@ -1,5 +1,4 @@
 import { CachedHistoricalDays } from "../research/historical-cache.js";
-import { backtestConservativeOrb } from "../research/conservative-orb.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
 import { overnightBars } from "../research/session-features.js";
 import { newYorkClock } from "../market/time.js";
@@ -28,48 +27,7 @@ for(const date of dates){
 const byDate=new Map<string,MinuteBar[]>();for(const b of selected){const d=newYorkClock(b.timestampMs).date;const arr=byDate.get(d)??[];arr.push(b);byDate.set(d,arr);}
 console.log("ELIGIBILITY "+JSON.stringify({candidateDates:dates.length,eligibleSessions:byDate.size,excluded,provisionalCalendarAndRoll:true}));
 console.log("RULE_ASSUMPTIONS "+JSON.stringify({startingBalanceUsd:50000,startingBalanceArbitrary:true,combineMllUsd:[2000,3000],mllTrailsEodBalance:true,mllFloorStopsAtStartingBalance:true,intradayUnrealizedEquityChecks:true,minuteBarWorstExtreme:true,commissionMnqRoundTripPerContractUsd:2,slippageTicksPerSide:3,dailyStopBudgetFractionOfMll:0.15,operatingDrawdownFractionOfMll:0.5,source:"NQ minute bars as MNQ price-path proxy",limitations:"minute-bar intrabar ordering unknown; extreme checked conservatively even on exit bar; no true orderbook/fills; account-specific Topstep rules unverified; profit target/consistency not modeled"}));
-for(const [stopPoints,targetPoints] of [[20,40],[20,60],[40,40],[40,120]] as const){
- const r=backtestConservativeOrb(selected,{openingRangeMinutes:5,stopPoints,targetPoints,contracts:1,friction:{roundTripCommissionUsd:0,slippageTicksPerSide:0}});
- if(r.excluded.length)throw Error("MODEL_EXCLUSIONS "+JSON.stringify(r.excluded));
- const trades=[...r.trades].sort((a,b)=>a.date.localeCompare(b.date));
- for(const contractsMnq of [1,2,3,5]){
-  for(const mll of [2000,3000]){
-   const start=50000,fee=5*contractsMnq,pointValue=2*contractsMnq;
-   let balance=start,highestEod=start,breachedAt:string|null=null,operatingStopAt:string|null=null,dailyStopCount=0,executed=0,skipped=0,minCushion=mll;
-   const dayLossBudget=mll*0.15,operatingBudget=mll*0.5;
-   for(const t of trades){
-    if(breachedAt!==null||operatingStopAt!==null){skipped++;continue;}
-    const floor=Math.min(start,highestEod-mll);
-    const bars=byDate.get(t.date)!;
-    const startIndex=bars.findIndex(b=>b.timestampMs===t.entryTimestampMs);
-    if(startIndex<0)throw Error("ENTRY_BAR_MISSING "+t.date);
-    const stop=t.direction==="LONG"?t.entry-stopPoints:t.entry+stopPoints;
-    const target=t.direction==="LONG"?t.entry+targetPoints:t.entry-targetPoints;
-    let adverse=0,exitSeen=false;
-    for(const b of bars.slice(startIndex)){
-     const stopHit=t.direction==="LONG"?b.low<=stop:b.high>=stop;
-     const targetHit=t.direction==="LONG"?b.high>=target:b.low<=target;
-     const worst=t.direction==="LONG"?b.low:b.high;
-     const unrealized=(worst-t.entry)*(t.direction==="LONG"?1:-1)*pointValue-fee;
-     adverse=Math.min(adverse,unrealized);
-     minCushion=Math.min(minCushion,balance+unrealized-floor);
-     if(balance+unrealized<=floor&&breachedAt===null)breachedAt=t.date;
-     if(stopHit||targetHit){exitSeen=true;break;}
-    }
-    if(!exitSeen&&t.exitReason!=="SESSION_END")throw Error("EXIT_RECONCILIATION "+t.date);
-    const realized=(t.exit-t.entry)*(t.direction==="LONG"?1:-1)*pointValue-fee;
-    executed++;
-    if(adverse<=-dayLossBudget)dailyStopCount++;
-    balance+=realized;
-    highestEod=Math.max(highestEod,balance);
-    if(start-balance>=operatingBudget&&operatingStopAt===null)operatingStopAt=t.date;
-   }
-   console.log("SCENARIO "+JSON.stringify({stopPoints,targetPoints,contractsMnq,mllUsd:mll,operatingBudgetUsd:operatingBudget,dailyLossBudgetUsd:dayLossBudget,executedTrades:executed,skippedTrades:skipped,simulatedNetUsd:Number((balance-start).toFixed(2)),mllFirstTouchDate:breachedAt,operatingStopDate:operatingStopAt,daysExceedingDailyBudget:dailyStopCount,minimumIntradayCushionUsd:Number(minCushion.toFixed(2)),status:breachedAt?"MLL_TOUCH":operatingStopAt?"OPERATING_STOP":"NO_TOUCH_IN_SAMPLE"}));
-  }
- }
-}
-console.log("TM001 COMBINE RESEARCH COMPLETE | NOT ACCOUNT RULE CERTIFICATION | NO STRATEGY APPROVAL");
-
+// Legacy ORB SCENARIO output retired: incompatible assumptions and misleading costs.
 type Direction="LONG"|"SHORT";
 type Signal={date:string;kind:"SWEEP_REVERSAL"|"BREAKOUT_CONTINUATION";direction:Direction;entryTime:number;entry:number;stop:number;target:number;exitTime:number;exit:number;exitReason:string;ambiguous:boolean};
 const signals:Signal[]=[];
@@ -104,22 +62,7 @@ for(const [date,bars] of byDate){
  }
 }
 console.log("SIGNAL_CONTRACT "+JSON.stringify({signals:signals.length,days:byDate.size,limitPerDay:6,lookbackBars:10,confirmation:"close of signal bar; next bar open",stopPoints:10,targetPoints:40,onePositionAtATime:true,cooldownBars:5,overnightTrades:false,session:"New York RTH only",noLookaheadForSignals:true,stopPriorityOnAmbiguousBar:true,limitations:"exploratory heuristics, not user-validated setups; NQ proxy for MNQ; no structural stop, fills/orderbook unknown; no out-of-sample validation"}));
-for(const kind of ["SWEEP_REVERSAL","BREAKOUT_CONTINUATION","ALL"] as const){
- const subset=kind==="ALL"?signals:signals.filter(s=>s.kind===kind);
- for(const [label,qty,pointValue,commission] of [["5_MNQ",5,10,10],["1_NQ",1,20,5],["2_NQ",2,40,10]] as const){
-  // Three ticks per side, tick size 0.25; 1 MNQ tick $0.50, 1 NQ tick $5.
-  const slip=label==="5_MNQ"?7.5:label==="1_NQ"?7.5:15;
-  const friction=commission+slip;
-  let wins=0,net=0,peak=0,maxDrawdown=0,ambiguous=0;
-  for(const t of subset){
-   const gross=(t.exit-t.entry)*(t.direction==="LONG"?1:-1)*pointValue;
-   const pnl=gross-friction;net+=pnl;peak=Math.max(peak,net);maxDrawdown=Math.max(maxDrawdown,peak-net);
-   if(pnl>0)wins++;if(t.ambiguous)ambiguous++;
-  }
-  console.log("SCREEN "+JSON.stringify({kind,position:label,tradeCount:subset.length,winningTrades:wins,winRatePct:subset.length?Math.round(10000*wins/subset.length)/100:null,netUsd:Math.round(net*100)/100,maxClosedTradeEquityDrawdownUsd:Math.round(maxDrawdown*100)/100,ambiguousBars:ambiguous,accountRiskNotYetSimulated:true,frictionPerTradeUsd:friction}));
- }
-}
-console.log("TM001 MULTI-SETUP DISCOVERY COMPLETE | NOT RISK CERTIFIED | NO STRATEGY APPROVAL");
+// Legacy SCREEN output retired: non-authoritative friction and no account risk model.
 const money=(n:number)=>Math.round(n*100)/100;
 const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15},{label:"1_NQ",usdPerPoint:20,commission:5,slippage:30},{label:"2_NQ",usdPerPoint:40,commission:10,slippage:60}] as const;
 type Trigger="MLL"|"OPERATING"|"DAILY";
