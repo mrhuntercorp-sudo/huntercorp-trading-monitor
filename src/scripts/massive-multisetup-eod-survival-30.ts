@@ -133,7 +133,7 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
  const start=50000,friction=size.commission+size.slippage;
  let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
  let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
- let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,ambiguousRiskBars=0,pretradeRejects=0;
+ let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,minObservedWorstBarCushion=mll,ambiguousRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
   if(t.date!==currentDate){
    if(currentDate)highEod=Math.max(highEod,balance);
@@ -162,8 +162,11 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
    if(b.timestampMs>t.exitTime)break;
    const worst=t.direction==="LONG"?b.low:b.high;
    const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
-   minCushion=Math.min(minCushion,adverseEquity-mllFloor);
+   // Observed bar extreme is a stress envelope, not necessarily reachable after an earlier modeled exit.
+   minObservedWorstBarCushion=Math.min(minObservedWorstBarCushion,adverseEquity-mllFloor);
    const crossed=crossing(entryEquity,adverseEquity,levels);
+   const modeledEquity=crossed&&mode==="THRESHOLD_PROXY"?crossed.level:adverseEquity;
+   minCushion=Math.min(minCushion,modeledEquity-mllFloor);
    if(!crossed)continue;
    if(b.timestampMs===t.exitTime)ambiguousRiskBars++;
    const riskPrice=t.entry+(crossed.level-balance+friction)/(sign*size.usdPerPoint);
@@ -184,6 +187,6 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
   if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
  if(currentDate)highEod=Math.max(highEod,balance);
- console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumIntradayCushionUsd:money(minCushion),dailyCutoffDays,stopHits,targets,ambiguousRiskBars,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
+ console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
 console.log("TM001 INTEGRATED EOD SCREEN COMPLETE | CACHE ONLY | ZERO TRADES | NOT CERTIFIED");
