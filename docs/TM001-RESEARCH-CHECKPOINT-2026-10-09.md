@@ -53,3 +53,19 @@ We are testing to find out what works, including the possibility that no tested 
 
 ## User clarification — strategy discovery mandate
 The user explicitly rejected the previous instruction to document their own entry process: their old trading method no longer works. TM001 must search for and validate better approaches independently, with risk-adjusted net expectancy, robustness, out-of-sample evidence and Combine survivability. Do not present any approach as guaranteed profitable.
+
+## Session plan — 2026-10-10 (updated live checklist)
+Objective: make the risk simulation internally consistent, remove misleading reporting, and establish a fair independent strategy-discovery protocol. Do not claim profitable edge without out-of-sample proof.
+
+- [x] Historical cache / session eligibility pipeline working (28 eligible sessions; provisional rollover/calendar)
+- [x] Isolated risk threshold regression: 10/10 GREEN, TypeScript GREEN (user verified)
+- [x] Integrated risk simulation runs in both threshold-proxy and worst-bar-stress modes (user verified)
+- [x] Research mandate corrected: **do not request or optimize user's former NQ trading method**
+- [ ] **NOW / P0:** reconcile threshold-proxy 2 NQ / $2k minimum cushion -$160 with no MLL event; distinguish observed worst intrabar excursion from modeled threshold execution and stop/target ordering. Add synthetic regression cases.
+- [ ] **P1:** retire or explicitly mark stale ORB SCENARIO and SCREEN output (older incorrect friction) so authoritative results are unambiguous.
+- [ ] **P2:** design common strategy comparison contract: signal definition, data window, execution assumptions, costs, MAE/MFE, expectancy, drawdown, Combine survival, regime breakdown.
+- [ ] **P3:** implement first independently motivated candidate strategies and run fair side-by-side in-sample comparisons; no parameter fishing.
+- [ ] **P4:** freeze rules and evaluate on untouched out-of-sample data, with slippage sensitivity and Combine survivability.
+- [ ] **LATER:** pre-NY 9:20–9:25 briefing, all-session alerts, GC expansion. No live order execution.
+
+Finish line tonight: P0 + P1 verified, P2 specified, P3 only if time/data supports it. Any item only becomes [x] after evidence from local test output.
