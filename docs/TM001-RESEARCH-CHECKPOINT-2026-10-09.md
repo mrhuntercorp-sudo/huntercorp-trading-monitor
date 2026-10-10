@@ -39,14 +39,17 @@
 ## Critical unfinished work, in order
 1. **Risk-engine correctness:** reconcile negative intraday MLL cushion vs no MLL touch; distinguish hypothetical worst-bar excursions from realized threshold-proxy fills; ensure entry fee, risk threshold, stop/target priority and EOD ratchet are consistent. Add focused synthetic regressions for simultaneous target/stop/risk touch, gaps, and halts. Avoid claiming precise fills from minute bars.
 2. **Reporting hygiene:** remove or clearly label legacy ORB `SCENARIO` and stale-friction `SCREEN` outputs; keep a single authoritative assumptions/results report.
-3. **Capture user's real NQ entry process:** ask what levels, confirmations, entry trigger, stop placement, profit taking, session, and no-trade filters they actually use. **Do not assume** sweep/breakout heuristics represent it.
-4. **Research design:** test specific hypotheses including overnight high/low sweeps, London/Asia context, New York opening move, breakout-and-retest, reversals, trend/range regimes, and relevant news/calendar filters, without excessive parameter fishing.
+3. **Independent strategy discovery (user correction, 2026-10-09):** the user's previous NQ trading method is not working and is NOT a required input, baseline, or strategy to optimize. Do not ask the user to document their old entries. Research candidate NQ strategies independently, using falsifiable hypotheses and objective criteria.
+4. **Research design:** systematically compare opening-range approaches, overnight high/low sweeps, London/Asia context, breakout-and-retest, trend continuation/pullbacks, reversals, trend/range regimes, and news/calendar filters. Predefine tests and baselines; avoid parameter fishing or declaring a winner based only on in-sample results.
 5. **Measure actual edge:** expectancy after realistic fees/slippage, win rate, payoff ratio, MAE/MFE, drawdown, losing streaks, intraday MLL exposure, and Combine survival. Test both account sizes separately; evaluate 5 MNQ, 1 NQ, 2 NQ only where risk supports them.
 6. **Validation:** train/discovery vs untouched out-of-sample periods, walk-forward checks, stress costs, realistic bar ordering uncertainty; more history may require explicit data authorization.
 7. **Only after research proof:** design monitor alerts and pre-NY briefing; user approval before any expanded spend. No autonomous trading.
 
 ## Resume instruction
-On return: read this checkpoint, check git state, **start with item 1 risk-engine classification fix**, then ask user to describe their actual NQ trade setup before designing new signals. Keep changes small, tested, and reproducible. Provide a single PowerShell block for local verification. Do not conflate passing software tests with a profitable trading strategy.
+On return: read this checkpoint, check git state, **start with item 1 risk-engine classification fix**, then proceed with independent strategy research and comparative tests. Do not require or request a description of the user's old NQ method. Keep changes small, tested, and reproducible. Provide a single PowerShell block for local verification. Do not conflate passing software tests with a profitable trading strategy.
 
 ## Operating principle
 We are testing to find out what works, including the possibility that no tested setup has an edge. Never increase risk to force returns or imply profits are guaranteed.
+
+## User clarification — strategy discovery mandate
+The user explicitly rejected the previous instruction to document their own entry process: their old trading method no longer works. TM001 must search for and validate better approaches independently, with risk-adjusted net expectancy, robustness, out-of-sample evidence and Combine survivability. Do not present any approach as guaranteed profitable.
