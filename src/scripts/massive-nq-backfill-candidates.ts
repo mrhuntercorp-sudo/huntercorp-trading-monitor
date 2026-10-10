@@ -7,7 +7,7 @@ const dateMs = (date: string) => Date.parse(date + "T00:00:00Z");
 const dateOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 export type BackfillTarget = { ticker: string; date: string };
 export async function planMissingNqFiles(options: {
-  end: string; tradingSessions: 20 | 60 | 90; cacheRoot: string;
+  end: string; tradingSessions: 20 | 30 | 60 | 90; cacheRoot: string;
 }): Promise<{
   firstDate: string; lastDate: string; candidates: BackfillTarget[];
   rolloverReview: string[]; holidayPolicyVerified: false; rollPolicyVerified: false;
