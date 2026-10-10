@@ -119,55 +119,6 @@ for(const kind of ["SWEEP_REVERSAL","BREAKOUT_CONTINUATION","ALL"] as const){
   console.log("SCREEN "+JSON.stringify({kind,position:label,tradeCount:subset.length,winningTrades:wins,winRatePct:subset.length?Math.round(10000*wins/subset.length)/100:null,netUsd:Math.round(net*100)/100,maxClosedTradeEquityDrawdownUsd:Math.round(maxDrawdown*100)/100,ambiguousBars:ambiguous,accountRiskNotYetSimulated:true,frictionPerTradeUsd:friction}));
  }
 }
-console.log("TM001 MULTI-SETUP DISCOVERY COMPLETE | NOT RISK CERTIFIED | NO STRATEGY APPROVAL")type Direction="LONG"|"SHORT";
-type Signal={date:string;kind:"SWEEP_REVERSAL"|"BREAKOUT_CONTINUATION";direction:Direction;entryTime:number;entry:number;stop:number;target:number;exitTime:number;exit:number;exitReason:string;ambiguous:boolean};
-const signals:Signal[]=[];
-for(const [date,bars] of byDate){
- const opening=bars.slice(0,5);
- const rangeHigh=Math.max(...opening.map(b=>b.high)),rangeLow=Math.min(...opening.map(b=>b.low));
- let availableFrom=5,dayCount=0;
- // No simultaneous positions, 5-minute cooldown, up to 6 opportunities/day.
- for(let i=15;i<bars.length-2&&dayCount<6;i++){
-  if(i<availableFrom)continue;
-  const b=bars[i]!,previous=bars.slice(i-10,i);
-  const prevHigh=Math.max(...previous.map(x=>x.high)),prevLow=Math.min(...previous.map(x=>x.low));
-  let kind:Signal["kind"]|null=null,dir:Direction|null=null;
-  // Sweeps: current bar trades beyond prior 10-minute extreme but closes back inside.
-  if(b.high>prevHigh&&b.close<prevHigh&&b.close<b.open){kind="SWEEP_REVERSAL";dir="SHORT";}
-  else if(b.low<prevLow&&b.close>prevLow&&b.close>b.open){kind="SWEEP_REVERSAL";dir="LONG";}
-  // Continuation: close through prior 10-minute extreme, aligned with opening-range bias.
-  else if(b.close>prevHigh&&b.close>rangeHigh&&b.close>b.open){kind="BREAKOUT_CONTINUATION";dir="LONG";}
-  else if(b.close<prevLow&&b.close<rangeLow&&b.close<b.open){kind="BREAKOUT_CONTINUATION";dir="SHORT";}
-  if(!kind||!dir)continue;
-  const entryBar=bars[i+1]!,entry=entryBar.open,sign=dir==="LONG"?1:-1;
-  // Research-only fixed stop/target; no claim that 10 points is structurally appropriate.
-  const stop=entry-sign*10,target=entry+sign*40;
-  let exit=bars.at(-1)!.close,exitIndex=bars.length-1,reason="SESSION_END",ambiguous=false;
-  for(let j=i+1;j<bars.length;j++){
-   const x=bars[j]!,stopHit=dir==="LONG"?x.low<=stop:x.high>=stop,targetHit=dir==="LONG"?x.high>=target:x.low<=target;
-   if(stopHit){ambiguous=targetHit;exit=dir==="LONG"?Math.min(stop,x.open):Math.max(stop,x.open);exitIndex=j;reason="STOP";break;}
-   if(targetHit){exit=target;exitIndex=j;reason="TARGET";break;}
-  }
-  signals.push({date,kind,direction:dir,entryTime:entryBar.timestampMs,entry,stop,target,exitTime:bars[exitIndex]!.timestampMs,exit,exitReason:reason,ambiguous});
-  dayCount++;availableFrom=exitIndex+6;
- }
-}
-console.log("SIGNAL_CONTRACT "+JSON.stringify({signals:signals.length,days:byDate.size,limitPerDay:6,lookbackBars:10,confirmation:"close of signal bar; next bar open",stopPoints:10,targetPoints:40,onePositionAtATime:true,cooldownBars:5,overnightTrades:false,session:"New York RTH only",noLookaheadForSignals:true,stopPriorityOnAmbiguousBar:true,limitations:"exploratory heuristics, not user-validated setups; NQ proxy for MNQ; no structural stop, fills/orderbook unknown; no out-of-sample validation"}));
-for(const kind of ["SWEEP_REVERSAL","BREAKOUT_CONTINUATION","ALL"] as const){
- const subset=kind==="ALL"?signals:signals.filter(s=>s.kind===kind);
- for(const [label,qty,pointValue,commission] of [["5_MNQ",5,10,10],["1_NQ",1,20,5],["2_NQ",2,40,10]] as const){
-  // Three ticks per side, tick size 0.25; 1 MNQ tick $0.50, 1 NQ tick $5.
-  const slip=label==="5_MNQ"?7.5:label==="1_NQ"?7.5:15;
-  const friction=commission+slip;
-  let wins=0,net=0,peak=0,maxDrawdown=0,ambiguous=0;
-  for(const t of subset){
-   const gross=(t.exit-t.entry)*(t.direction==="LONG"?1:-1)*pointValue;
-   const pnl=gross-friction;net+=pnl;peak=Math.max(peak,net);maxDrawdown=Math.max(maxDrawdown,peak-net);
-   if(pnl>0)wins++;if(t.ambiguous)ambiguous++;
-  }
-  console.log("SCREEN "+JSON.stringify({kind,position:label,tradeCount:subset.length,winningTrades:wins,winRatePct:subset.length?Math.round(10000*wins/subset.length)/100:null,netUsd:Math.round(net*100)/100,maxClosedTradeEquityDrawdownUsd:Math.round(maxDrawdown*100)/100,ambiguousBars:ambiguous,accountRiskNotYetSimulated:true,frictionPerTradeUsd:friction}));
- }
-}
 console.log("TM001 MULTI-SETUP DISCOVERY COMPLETE | NOT RISK CERTIFIED | NO STRATEGY APPROVAL");
 const money=(n:number)=>Math.round(n*100)/100;
 const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15},{label:"1_NQ",usdPerPoint:20,commission:5,slippage:30},{label:"2_NQ",usdPerPoint:40,commission:10,slippage:60}] as const;
