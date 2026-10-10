@@ -76,7 +76,7 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
  const start=50000,friction=size.commission+size.slippage;
  let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
  let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
- let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,minObservedWorstBarCushion=mll,ambiguousRiskBars=0,pretradeRejects=0;
+ let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,minObservedWorstBarCushion=mll,ambiguousRiskBars=0,stopTargetCollisionBars=0,stopRiskCollisionBars=0,gapThroughStopBars=0,gapThroughRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
   if(t.date!==currentDate){
    if(currentDate)highEod=Math.max(highEod,balance);
@@ -111,8 +111,19 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
    const modeledEquity=crossed&&mode==="THRESHOLD_PROXY"?crossed.level:adverseEquity;
    minCushion=Math.min(minCushion,modeledEquity-mllFloor);
    if(!crossed)continue;
-   if(b.timestampMs===t.exitTime)ambiguousRiskBars++;
+   const stopTouched=t.direction==="LONG"?b.low<=t.stop:b.high>=t.stop;
+   const targetTouched=t.direction==="LONG"?b.high>=t.target:b.low<=t.target;
+   const stopTargetCollision=stopTouched&&targetTouched;
+   const stopRiskCollision=stopTouched;
+   const gapThroughStop=t.direction==="LONG"?b.open<=t.stop:b.open>=t.stop;
    const riskPrice=t.entry+(crossed.level-balance+friction)/(sign*size.usdPerPoint);
+   const gapThroughRisk=t.direction==="LONG"?b.open<=riskPrice:b.open>=riskPrice;
+   if(stopTargetCollision)stopTargetCollisionBars++;
+   if(stopRiskCollision)stopRiskCollisionBars++;
+   if(gapThroughStop)gapThroughStopBars++;
+   if(gapThroughRisk)gapThroughRiskBars++;
+   // These flags report uncertainty only: the proxy still cannot determine the intrabar path or executable fill.
+   if(b.timestampMs===t.exitTime||stopRiskCollision||stopTargetCollision||gapThroughStop||gapThroughRisk)ambiguousRiskBars++;
    exit=mode==="THRESHOLD_PROXY"?riskPrice:worst;
    reason=crossed.name;
    break;
@@ -130,6 +141,6 @@ for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHO
   if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
  if(currentDate)highEod=Math.max(highEod,balance);
- console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
+ console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
 console.log("TM001 INTEGRATED EOD SCREEN COMPLETE | CACHE ONLY | ZERO TRADES | NOT CERTIFIED");
