@@ -1,0 +1,52 @@
+# TM001 — Trading Research Checkpoint (2026-10-09)
+
+## Status and objective
+- Project: HunterCorp TM001 NQ/GC Trading Intelligence Monitor. Local repo: `C:\Users\hunte\huntercorp-trading-monitor`.
+- Research and alerts only; **no automated/live orders**, no additional Massive API calls or spend without authorization.
+- Primary instrument NQ (MNQ for sizing), secondary GC later. New York session is primary; eventually monitor all sessions and provide 9:20–9:25 ET premarket brief.
+- Goal: discover and independently validate repeatable trading setups with positive net expectancy **and** survivability under the user's TopstepX EOD Trading Combine constraints. Do not promise profit.
+- User reports the losing simulation resembles their actual experience; this is a motivation to investigate execution decisions, not evidence the heuristic models their trading.
+
+## Account/risk assumptions (not certified Topstep rules)
+- Two distinct Topstep EOD Combine accounts, MLL allowances **$2,000** and **$3,000**. User does **not** trade intraday-MLL account type.
+- Provisional model: MLL floor trails highest end-of-day balance, capped at starting balance; unrealized intraday equity checked against floor.
+- Starting balance $50,000 is an illustrative model input, **not confirmed account size**.
+- Internal risk rules, **not Topstep policy**: daily stop 15% of MLL ($300/$450), operating drawdown 50% of MLL ($1,000/$1,500), currently modeled as trailing from highest EOD balance.
+- Sizes tested: 5 MNQ, 1 NQ, 2 NQ. Friction estimates per round trip: $25, $35, $70 respectively (commission + 3 ticks slippage per side); not broker-verified.
+- Confirm actual account sizes, fees, profit targets, consistency requirements, and relevant EOD rules before any certification.
+
+## Completed evidence
+- GitHub commit `58e3b0f`: isolated threshold regression, **TypeScript GREEN and 10/10 tests GREEN** on user PC.
+- GitHub commit `0e50023`: integrated threshold-proxy vs worst-bar-stress survival simulation, **TypeScript GREEN**, regression 10/10, full script ran using cached data, zero API calls/trades.
+- 30 candidate dates, 28 eligible RTH sessions (2026-08-21 through 2026-10-02 sample); excluded 2026-09-11 incomplete RTH and 2026-09-14 rollover unverified.
+- 168 heuristic signals across 28 sessions, max 6/day, 87 sweep reversal and 81 breakout continuation; signal definitions: 10-minute extreme sweep/reclaim or breakout through prior 10-minute extreme aligned with opening range; next-bar open entry; fixed 10-point stop and 40-point target. **Not user-validated setups**.
+- Both position modes failed internal operating risk for all six size/MLL combinations. Integrated results:
+  
+  | Size | MLL | Threshold proxy net | Worst-bar stress net |
+  |---|---:|---:|---:|
+  | 5 MNQ | $2,000 | -$1,000 | -$1,017.50 |
+  | 5 MNQ | $3,000 | -$1,600 | -$1,502.50 |
+  | 1 NQ | $2,000 | -$1,000 | -$1,510 |
+  | 1 NQ | $3,000 | -$1,500 | -$1,510 |
+  | 2 NQ | $2,000 | -$1,000 | -$2,440 |
+  | 2 NQ | $3,000 | -$1,500 | -$2,440 |
+  
+- Worst-bar stress **2 NQ / $2k MLL** first simulated MLL touch 2026-08-24, minimum cushion -$440.
+- Threshold-proxy **2 NQ / $2k MLL** shows minimum intraday cushion -$160 **despite** `firstMllTouch=null`; this is a **reporting/classification inconsistency to investigate**, not a certified survival.
+- Several scenarios have 2–3 ambiguous risk bars; one-minute OHLC does not determine order of stop/target/risk crossings.
+- Script still emits legacy `SCENARIO` and `SCREEN` blocks, with different/incorrect cost assumptions; **do not use those figures for decisions**. Use `INTEGRATED_SURVIVAL` only, with qualifications.
+
+## Critical unfinished work, in order
+1. **Risk-engine correctness:** reconcile negative intraday MLL cushion vs no MLL touch; distinguish hypothetical worst-bar excursions from realized threshold-proxy fills; ensure entry fee, risk threshold, stop/target priority and EOD ratchet are consistent. Add focused synthetic regressions for simultaneous target/stop/risk touch, gaps, and halts. Avoid claiming precise fills from minute bars.
+2. **Reporting hygiene:** remove or clearly label legacy ORB `SCENARIO` and stale-friction `SCREEN` outputs; keep a single authoritative assumptions/results report.
+3. **Capture user's real NQ entry process:** ask what levels, confirmations, entry trigger, stop placement, profit taking, session, and no-trade filters they actually use. **Do not assume** sweep/breakout heuristics represent it.
+4. **Research design:** test specific hypotheses including overnight high/low sweeps, London/Asia context, New York opening move, breakout-and-retest, reversals, trend/range regimes, and relevant news/calendar filters, without excessive parameter fishing.
+5. **Measure actual edge:** expectancy after realistic fees/slippage, win rate, payoff ratio, MAE/MFE, drawdown, losing streaks, intraday MLL exposure, and Combine survival. Test both account sizes separately; evaluate 5 MNQ, 1 NQ, 2 NQ only where risk supports them.
+6. **Validation:** train/discovery vs untouched out-of-sample periods, walk-forward checks, stress costs, realistic bar ordering uncertainty; more history may require explicit data authorization.
+7. **Only after research proof:** design monitor alerts and pre-NY briefing; user approval before any expanded spend. No autonomous trading.
+
+## Resume instruction
+On return: read this checkpoint, check git state, **start with item 1 risk-engine classification fix**, then ask user to describe their actual NQ trade setup before designing new signals. Keep changes small, tested, and reproducible. Provide a single PowerShell block for local verification. Do not conflate passing software tests with a profitable trading strategy.
+
+## Operating principle
+We are testing to find out what works, including the possibility that no tested setup has an edge. Never increase risk to force returns or imply profits are guaranteed.
