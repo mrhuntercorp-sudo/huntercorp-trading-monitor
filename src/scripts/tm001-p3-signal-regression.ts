@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import {overnightSweepReclaims,openingRangeBreakoutRetest,type P3Bar} from "../research/p3-nq-signals.js";
+const bar=(i:number,o:number,h:number,l:number,c:number):P3Bar=>({timestampMs:i*60000,open:o,high:h,low:l,close:c});
+let n=0;function test(name:string,fn:()=>void){fn();n++;console.log("PASS "+name);}
+const flat=Array.from({length:10},(_,i)=>bar(i,100,101,99,100));
+test("NO_SWEEP_NO_SIGNAL",()=>assert.equal(overnightSweepReclaims(flat,105,95).length,0));
+test("OVERNIGHT_HIGH_RECLAIM_SHORT",()=>{const b=[bar(0,100,107,99,103),bar(1,103,104,100,102)];const s=overnightSweepReclaims(b,105,95);assert.equal(s[0]?.direction,"SHORT");assert.equal(s[0]?.entryTime,60000);});
+test("OVERNIGHT_LOW_RECLAIM_LONG",()=>{const b=[bar(0,100,101,93,97),bar(1,97,99,96,98)];assert.equal(overnightSweepReclaims(b,105,95)[0]?.direction,"LONG");});
+test("NO_SWEEP_IF_CLOSE_OUTSIDE",()=>assert.equal(overnightSweepReclaims([bar(0,100,108,99,107),bar(1,107,108,106,107)],105,95).length,0));
+test("NO_ENTRY_WITHOUT_NEXT_BAR",()=>assert.equal(overnightSweepReclaims([bar(0,100,107,99,103)],105,95).length,0));
+test("ONCE_PER_SIDE",()=>assert.equal(overnightSweepReclaims([bar(0,100,107,99,103),bar(1,103,107,99,103),bar(2,103,104,99,101)],105,95).length,1));
+test("REJECT_BAD_OVERNIGHT_LEVELS",()=>assert.throws(()=>overnightSweepReclaims(flat,95,105)));
+const opening=Array.from({length:5},(_,i)=>bar(i,100,102,98,100));
+test("ORB_BREAK_ALONE_NOT_ENTRY",()=>assert.equal(openingRangeBreakoutRetest([...opening,bar(5,101,105,101,104),bar(6,104,106,103,105)]).length,0));
+test("ORB_LONG_RETEST_NEXT_BAR",()=>{const s=openingRangeBreakoutRetest([...opening,bar(5,101,105,101,104),bar(6,104,105,101,103),bar(7,103,104,102,103)]);assert.equal(s[0]?.direction,"LONG");assert.equal(s[0]?.entryTime,420000);});
+test("ORB_SHORT_RETEST_NEXT_BAR",()=>{const s=openingRangeBreakoutRetest([...opening,bar(5,99,99,95,96),bar(6,96,99,95,97),bar(7,97,98,96,97)]);assert.equal(s[0]?.direction,"SHORT");});
+test("ORB_INVALIDATED_RETEST",()=>assert.equal(openingRangeBreakoutRetest([...opening,bar(5,101,105,101,104),bar(6,104,105,99,100),bar(7,100,101,99,100)]).length,0));
+test("ORB_NOT_ENOUGH_BARS",()=>assert.equal(openingRangeBreakoutRetest(opening).length,0));
+test("REJECT_UNORDERED_BARS",()=>assert.throws(()=>openingRangeBreakoutRetest([flat[1]!,flat[0]!])));
+test("REJECT_INVALID_OHLC",()=>assert.throws(()=>overnightSweepReclaims([bar(0,100,99,101,100)],105,95)));
+console.log("TM001 P3 SIGNAL REGRESSION GREEN "+n+"/"+n);
+console.log("PURE SYNTHETIC DATA | NO API | NO CACHE | NO TRADES | NOT PROFIT VALIDATED");
