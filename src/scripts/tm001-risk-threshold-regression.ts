@@ -13,9 +13,9 @@ const limits=(s:RiskState):Limits=>({
 function firstThreshold(s:RiskState,entryEquity:number,adverseEquity:number){
  const l=limits(s);
  if(adverseEquity>entryEquity)throw Error("ADVERSE_EQUITY_INVALID");
- const candidates: {name:Trigger;level:number}[]=[
+ const candidates=([
   {name:"MLL",level:l.mllFloor},{name:"OPERATING",level:l.operatingFloor},{name:"DAILY",level:l.dailyFloor}
- ].filter(x=>entryEquity>x.level&&adverseEquity<=x.level);
+ ] satisfies {name:Trigger;level:number}[]).filter(x=>entryEquity>x.level&&adverseEquity<=x.level);
  candidates.sort((a,b)=>b.level-a.level);
  return {first:candidates[0]??null,all:candidates,limits:l};
 }
