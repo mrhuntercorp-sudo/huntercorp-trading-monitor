@@ -122,46 +122,68 @@ for(const kind of ["SWEEP_REVERSAL","BREAKOUT_CONTINUATION","ALL"] as const){
 console.log("TM001 MULTI-SETUP DISCOVERY COMPLETE | NOT RISK CERTIFIED | NO STRATEGY APPROVAL");
 const money=(n:number)=>Math.round(n*100)/100;
 const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15},{label:"1_NQ",usdPerPoint:20,commission:5,slippage:30},{label:"2_NQ",usdPerPoint:40,commission:10,slippage:60}] as const;
-console.log("ASSUMPTIONS "+JSON.stringify({signalCount:signals.length,tradeOrder:"chronological",mllModel:"EOD balance trailing floor, capped at starting balance; unrealized equity intraday",startingBalanceUsd:50000,startingBalanceIllustrative:true,dailyBudgetFractionOfMll:0.15,operatingBudgetFractionOfMll:0.5,slippageTicksPerSide:3,commission:"illustrative, not verified Topstep schedule",positionCosts:sizes.map(x=>({position:x.label,commissionUsd:x.commission,slippageUsd:x.slippage,frictionUsd:x.commission+x.slippage})),limitations:"NQ minute OHLC proxy, intrabar sequence unknowable; liquidation assumed at bar extreme, which can exceed limits; not executable; 28 in-sample sessions; no profit target/consistency rules"}));
-for(const size of sizes)for(const mll of [2000,3000]){
- const start=50000,dayBudget=mll*0.15,operatingBudget=mll*0.5,friction=size.commission+size.slippage;
- let balance=start,highEod=start,firstMllTouch:string|null=null,firstOperatingStop:string|null=null,cutoffDays=0,executed=0,skipped=0,minCushion=mll,peak=start,maxClosedDrawdown=0,dayPnl=0,dayStart=start,currentDate="",haltToday=false;
- let stopHits=0,targets=0;
- const ordered=[...signals].sort((a,b)=>a.entryTime-b.entryTime);
+type Trigger="MLL"|"OPERATING"|"DAILY";
+function crossing(entryEquity:number,adverseEquity:number,levels:{name:Trigger;level:number}[]){
+ // Higher equity thresholds are encountered first on a monotonically adverse path.
+ return levels.filter(x=>entryEquity>x.level&&adverseEquity<=x.level).sort((a,b)=>b.level-a.level)[0]??null;
+}
+const ordered=[...signals].sort((a,b)=>a.entryTime-b.entryTime);
+console.log("INTEGRATED_ASSUMPTIONS "+JSON.stringify({signals:ordered.length,startingBalanceUsd:50000,startingBalanceIllustrative:true,positions:sizes,thresholdModes:["THRESHOLD_PROXY","WORST_BAR_STRESS"],dailyBudgetFractionOfMll:.15,operatingBudgetFractionOfMll:.5,operatingFloor:"EOD_HIGH_MINUS_HALF_MLL_INTERNAL_ONLY",mllFloor:"MIN(START,EOD_HIGH_MINUS_MLL)",dailyFloor:"DAY_START_MINUS_15_PERCENT_MLL",slippageTicksPerSide:3,commissionUnverified:true,limitations:"Minute OHLC cannot order target, stop and risk crossings within the same minute. Threshold proxy assumes execution exactly at limit; stress assumes worst bar extreme. Neither is a tradable fill prediction. Signal selection is independent of risk halts. In-sample only; no account certification."}));
+for(const size of sizes)for(const mll of [2000,3000])for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
+ const start=50000,friction=size.commission+size.slippage;
+ let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
+ let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
+ let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion=mll,ambiguousRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
   if(t.date!==currentDate){
-   if(currentDate)highEod=Math.max(highEod,balance); // floor ratchets only after completed trading day
-   currentDate=t.date;dayStart=balance;dayPnl=0;haltToday=false;
+   if(currentDate)highEod=Math.max(highEod,balance);
+   currentDate=t.date;dayStart=balance;haltToday=false;
   }
   if(firstMllTouch||firstOperatingStop||haltToday){skipped++;continue;}
-  const floor=Math.min(start,highEod-mll);
+  const mllFloor=Math.min(start,highEod-mll);
+  const operatingFloor=highEod-mll*.5;
+  const dailyFloor=dayStart-mll*.15;
+  const levels:{name:Trigger;level:number}[]=[{name:"MLL",level:mllFloor},{name:"OPERATING",level:operatingFloor},{name:"DAILY",level:dailyFloor}];
+  if(balance<=mllFloor||balance<=operatingFloor||balance<=dailyFloor){
+   pretradeRejects++;skipped++;haltToday=true;
+   if(balance<=mllFloor)firstMllTouch=t.date;
+   else if(balance<=operatingFloor)firstOperatingStop=t.date;
+   continue;
+  }
   const bars=byDate.get(t.date)!;
   const idx=bars.findIndex(b=>b.timestampMs===t.entryTime);
   if(idx<0)throw Error("MISSING_ENTRY "+t.date);
   const sign=t.direction==="LONG"?1:-1;
-  let exit=t.exit,reason=t.exitReason,finished=false;
-  // Evaluate only until the signal's independently simulated exit bar.
+  let exit=t.exit,reason=t.exitReason;
+  const entryEquity=balance-friction;
+  // Price risk is evaluated through the independent stop/target exit minute.
+  // If the threshold and strategy exit share a bar, ordering is unknowable.
   for(const b of bars.slice(idx)){
    if(b.timestampMs>t.exitTime)break;
    const worst=t.direction==="LONG"?b.low:b.high;
-   const worstPnl=(worst-t.entry)*sign*size.usdPerPoint-friction;
-   const worstEquity=balance+worstPnl;
-   minCushion=Math.min(minCushion,worstEquity-floor);
-   // Worst extreme wins over target when both occur in a minute.
-   if(worstEquity<=floor){firstMllTouch=t.date;exit=worst;reason="MLL_TOUCH";finished=true;break;}
-   if(worstEquity<=start-operatingBudget){firstOperatingStop=t.date;exit=worst;reason="OPERATING_STOP";finished=true;break;}
-   if(dayPnl+worstPnl<=-dayBudget){exit=worst;reason="DAILY_CUTOFF";finished=true;break;}
+   const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
+   minCushion=Math.min(minCushion,adverseEquity-mllFloor);
+   const crossed=crossing(entryEquity,adverseEquity,levels);
+   if(!crossed)continue;
+   if(b.timestampMs===t.exitTime)ambiguousRiskBars++;
+   const riskPrice=t.entry+(crossed.level-balance+friction)/(sign*size.usdPerPoint);
+   exit=mode==="THRESHOLD_PROXY"?riskPrice:worst;
+   reason=crossed.name;
+   break;
   }
-  if(!finished&&t.exitTime< t.entryTime)throw Error("INVALID_EXIT_TIME");
   const pnl=(exit-t.entry)*sign*size.usdPerPoint-friction;
-  balance+=pnl;dayPnl+=pnl;executed++;
+  balance+=pnl;executed++;
   peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
-  if(reason==="DAILY_CUTOFF"){cutoffDays++;haltToday=true;}
-  if(reason==="STOP")stopHits++;
-  if(reason==="TARGET")targets++;
-  if(firstMllTouch||firstOperatingStop){haltToday=true;}
+  if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
+  else if(reason==="OPERATING"){firstOperatingStop=t.date;haltToday=true;}
+  else if(reason==="DAILY"){dailyCutoffDays++;haltToday=true;}
+  else if(reason==="STOP")stopHits++;
+  else if(reason==="TARGET")targets++;
+  // Stress fills may gap through the higher-priority trigger and violate deeper limits.
+  if(balance<=mllFloor&&firstMllTouch===null){firstMllTouch=t.date;haltToday=true;}
+  if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
  if(currentDate)highEod=Math.max(highEod,balance);
- console.log("SURVIVAL "+JSON.stringify({position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumIntradayCushionUsd:money(minCushion),dailyCutoffDays:cutoffDays,stopHits,targets,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
+ console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumIntradayCushionUsd:money(minCushion),dailyCutoffDays,stopHits,targets,ambiguousRiskBars,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
-console.log("TM001 MULTI-SETUP EOD SCREEN COMPLETE | RESEARCH ONLY | ZERO TRADES");
+console.log("TM001 INTEGRATED EOD SCREEN COMPLETE | CACHE ONLY | ZERO TRADES | NOT CERTIFIED");
