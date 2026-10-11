@@ -7,7 +7,10 @@ import { newYorkClock } from "../market/time.js";
 import { provisionalClosedDates, provisionalNqContract, isProvisionalRoll } from "./massive-nq-calendar-policy.js";
 import type { MinuteBar } from "../market/types.js";
 
+const stopPoints=process.env.TM001_STOP_POINTS==="40"?40:10;
+if(process.env.TM001_STOP_POINTS!==undefined&&!["10","40"].includes(process.env.TM001_STOP_POINTS))throw Error("STOP_POINTS_MUST_BE_10_OR_40");
 console.log("=== TM001 P4c FOUR-CANDIDATE EOD SURVIVAL SCREEN ===");
+console.log("STOP_VARIANT "+JSON.stringify({stopPoints,targetPoints:40,baselineUnchanged:stopPoints===10,experimental:stopPoints===40}));
 console.log("CACHE ONLY | ZERO API | ZERO WRITES | ZERO TRADES | RESEARCH PROXY");
 const cache=new CachedHistoricalDays({async getContractMinuteBars(){throw Error("NETWORK_DISABLED");}});
 const ms=(s:string)=>Date.parse(s+"T00:00:00Z"),iso=(t:number)=>new Date(t).toISOString().slice(0,10),dayMs=86400000;
@@ -36,7 +39,7 @@ const allSignals=new Map<P4Strategy,Signal[]>();
 for(const strategy of strategies){
  const signals:Signal[]=[];
  for(const [date,bars] of byDate){
-  const candidates=generateP4Signals({bars,contractVerified:true,calendarVerified:true},strategy);
+  const candidates=generateP4Signals({bars,contractVerified:true,calendarVerified:true},strategy,stopPoints);
   let availableFrom=0;
   for(const candidate of candidates.sort((a,b)=>a.entryTime-b.entryTime)){
    const i=bars.findIndex(b=>b.timestampMs===candidate.entryTime);
@@ -57,7 +60,7 @@ for(const strategy of strategies){
   }
  }
  allSignals.set(strategy,signals);
- console.log("P4C_STRATEGY_SIGNALS "+JSON.stringify({strategy,signals:signals.length,eligibleSessions:byDate.size,stopPoints:10,targetPoints:40,entry:"next-bar-open",maxTradesPerDay:1,timeExitMinutes:30,entryMinuteExits:signals.filter(x=>x.entryMinuteExit).length,overlapSuppressed:true,inSampleOnly:true}));
+ console.log("P4C_STRATEGY_SIGNALS "+JSON.stringify({strategy,signals:signals.length,eligibleSessions:byDate.size,stopPoints,targetPoints:40,entry:"next-bar-open",maxTradesPerDay:1,timeExitMinutes:30,entryMinuteExits:signals.filter(x=>x.entryMinuteExit).length,overlapSuppressed:true,inSampleOnly:true}));
 }
 // Legacy SCREEN output retired: non-authoritative friction and no account risk model.
 const money=(n:number)=>Math.round(n*100)/100;
