@@ -1,3 +1,4 @@
+import {riskBarEligible,auditedExitTime,auditHoldingMinutes,exitAtDeadline} from "../research/p4e-execution-boundaries.js";
 import {generateP4Signals,type P4Strategy} from "../research/p4-nq-signals.js";
 import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
@@ -46,7 +47,7 @@ for(const strategy of strategies){
    let exit=entry,exitIndex=i,reason="TIME_EXIT",ambiguous=false;
    const deadline=Math.min(candidate.timeExitMs,bars.at(-1)!.timestampMs);
    for(let j=i;j<bars.length;j++){
-    if(bars[j]!.timestampMs>=deadline){exit=bars[j]!.open;exitIndex=j;reason="TIME_EXIT";break;}
+    if(exitAtDeadline(bars[j]!.timestampMs,deadline)){exit=bars[j]!.open;exitIndex=j;reason="TIME_EXIT";break;}
     if(j===bars.length-1){exit=bars[j]!.close;exitIndex=j;reason="SESSION_END";break;}
     const x=bars[j]!,stopHit=candidate.direction==="LONG"?x.low<=stop:x.high>=stop,targetHit=candidate.direction==="LONG"?x.high>=target:x.low<=target;
     if(stopHit){ambiguous=targetHit;exit=candidate.direction==="LONG"?Math.min(stop,x.open):Math.max(stop,x.open);exitIndex=j;reason="STOP";break;}
@@ -101,7 +102,7 @@ for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THR
   // Price risk is evaluated through the independent stop/target exit minute.
   // If the threshold and strategy exit share a bar, ordering is unknowable.
   for(const b of bars.slice(idx)){
-   if(b.timestampMs>t.exitTime||(t.exitReason==="TIME_EXIT"&&b.timestampMs===t.exitTime))break;
+   if(!riskBarEligible(b.timestampMs,t.exitTime,t.exitReason))break;
    const worst=t.direction==="LONG"?b.low:b.high;
    const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
    // Observed bar extreme is a stress envelope, not necessarily reachable after an earlier modeled exit.
@@ -130,7 +131,7 @@ for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THR
   }
   const pnl=(exit-t.entry)*sign*size.usdPerPoint-friction;
   balance+=pnl;executed++;
-  tradeAudit.push({date:t.date,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(actualExitTime).toISOString(),direction:t.direction,entry:t.entry,exit,exitReason:reason,holdingMinutes:(actualExitTime-t.entryTime)/60000,netUsd:money(pnl),entryMinuteExit:actualExitTime===t.entryTime,stopTargetCollision:t.ambiguous});
+  tradeAudit.push({date:t.date,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(auditedExitTime(t.exitTime,actualExitTime===t.exitTime?null:actualExitTime)).toISOString(),direction:t.direction,entry:t.entry,exit,exitReason:reason,holdingMinutes:auditHoldingMinutes(t.entryTime,actualExitTime),netUsd:money(pnl),entryMinuteExit:actualExitTime===t.entryTime,stopTargetCollision:t.ambiguous});
   peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
   if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
   else if(reason==="OPERATING"){firstOperatingStop=t.date;haltToday=true;}
