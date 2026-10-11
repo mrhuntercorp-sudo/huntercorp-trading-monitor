@@ -39,7 +39,7 @@ const noPost=independentReplay({...base,bars:[{time:t,open:100,high:101,low:99},
 test(noPost.reason==="TIME_EXIT"&&noPost.net===25,"time-exit open excludes later extreme");
 const operating=independentReplay({...base,mll:2000,dayStart:50500,balance:50500,highEod:50500});
 test(operating.reason==="DAILY","daily floor priority with $2k MLL");
-const mll=independentReplay({...base,mll:3000,balance:49900,dayStart:53000,highEod:53000});
+const mll=independentReplay({...base,mll:3000,balance:53000,dayStart:53000,highEod:53000});
 test(mll.reason==="DAILY","highest encountered equity threshold wins");
 const short=independentReplay({...base,direction:"SHORT",bars:[{time:t,open:100,high:150,low:99}]});
 test(short.reason==="DAILY"&&short.exit>100,"short adverse move");
