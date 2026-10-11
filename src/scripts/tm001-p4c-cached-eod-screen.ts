@@ -100,7 +100,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   // Price risk is evaluated through the independent stop/target exit minute.
   // If the threshold and strategy exit share a bar, ordering is unknowable.
   for(const b of bars.slice(idx)){
-   if(b.timestampMs>t.exitTime)break;
+   if(b.timestampMs>t.exitTime||(t.exitReason==="TIME_EXIT"&&b.timestampMs===t.exitTime))break;
    const worst=t.direction==="LONG"?b.low:b.high;
    const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
    // Observed bar extreme is a stress envelope, not necessarily reachable after an earlier modeled exit.
