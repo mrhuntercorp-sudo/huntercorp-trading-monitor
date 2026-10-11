@@ -62,7 +62,7 @@ for(const strategy of strategies){
 }
 // Legacy SCREEN output retired: non-authoritative friction and no account risk model.
 const money=(n:number)=>Math.round(n*100)/100;
-const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15}] as const;
+const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15},{label:"1_NQ",usdPerPoint:20,commission:5,slippage:30},{label:"2_NQ",usdPerPoint:40,commission:10,slippage:60}] as const;
 type Trigger="MLL"|"OPERATING"|"DAILY";
 function crossing(entryEquity:number,adverseEquity:number,levels:{name:Trigger;level:number}[]){
  // Higher equity thresholds are encountered first on a monotonically adverse path.
@@ -71,7 +71,7 @@ function crossing(entryEquity:number,adverseEquity:number,levels:{name:Trigger;l
 for(const strategy of strategies){
 const ordered=[...allSignals.get(strategy)!].sort((a,b)=>a.entryTime-b.entryTime);
 console.log("INTEGRATED_ASSUMPTIONS "+JSON.stringify({signals:ordered.length,startingBalanceUsd:50000,startingBalanceIllustrative:true,positions:sizes,thresholdModes:["THRESHOLD_PROXY","WORST_BAR_STRESS"],dailyBudgetFractionOfMll:.15,operatingBudgetFractionOfMll:.5,operatingFloor:"EOD_HIGH_MINUS_HALF_MLL_INTERNAL_ONLY",mllFloor:"MIN(START,EOD_HIGH_MINUS_MLL)",dailyFloor:"DAY_START_MINUS_15_PERCENT_MLL",slippageTicksPerSide:3,commissionUnverified:true,limitations:"Minute OHLC cannot order target, stop and risk crossings within the same minute. Threshold proxy assumes execution exactly at limit; stress assumes worst bar extreme. Neither is a tradable fill prediction. Signal selection is independent of risk halts. In-sample only; no account certification."}));
-for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
+for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
  const start=50000,friction=size.commission+size.slippage;
  let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
  let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
@@ -156,15 +156,15 @@ for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THR
  };
  const scorecardErrors=validateScorecard(scorecard);
  if(scorecardErrors.length)throw Error("SCORECARD_VALIDATION_FAILED "+JSON.stringify({position:size.label,mll,mode,errors:scorecardErrors}));
- if(Math.abs(tradeAudit.reduce((a,t)=>a+t.netUsd,0)-(balance-start))>0.001)throw Error("AUDIT_RECONCILIATION_FAILED "+strategy+" "+mode);
- for(const t of tradeAudit)console.log("P4D_AUDIT_TRADE "+JSON.stringify({strategy,mode,...t}));
+ if(Math.abs(tradeAudit.reduce((a,t)=>a+t.netUsd,0)-(balance-start))>0.001)throw Error("AUDIT_RECONCILIATION_FAILED "+strategy+" "+size.label+" "+mll+" "+mode);
+ for(const t of tradeAudit)console.log("P4D_AUDIT_TRADE "+JSON.stringify({strategy,position:size.label,mllUsd:mll,mode,...t}));
  const base=money(balance-start);
  const n=tradeAudit.length;
  const winners=tradeAudit.filter(t=>t.netUsd>0).sort((a,b)=>b.netUsd-a.netUsd);
- console.log("P4D_AUDIT_SUMMARY "+JSON.stringify({strategy,mode,executed:n,netUsd:base,totalBaselineCostsUsd:n*25,entryMinuteExits:tradeAudit.filter(t=>t.entryMinuteExit).length,entryMinuteStops:tradeAudit.filter(t=>t.entryMinuteExit&&t.exitReason==="STOP").length,entryMinuteTargets:tradeAudit.filter(t=>t.entryMinuteExit&&t.exitReason==="TARGET").length,exitReasons:Object.fromEntries([...new Set(tradeAudit.map(t=>t.exitReason))].map(reason=>[reason,tradeAudit.filter(t=>t.exitReason===reason).length])),scorecardNetUsd:scorecard.netUsd,scorecardResearchStatus:scorecard.researchStatus}));
- for(const extra of [0,2.5,5,10,20])console.log("P4D_COST_STRESS "+JSON.stringify({strategy,mode,additionalCostPerTradeUsd:extra,netUsd:money(base-n*extra),arithmeticOnly:true}));
- for(const ticks of [0,1,2,3])console.log("P4D_SLIPPAGE_STRESS "+JSON.stringify({strategy,mode,additionalAdverseTicksPerSide:ticks,netUsd:money(base-n*ticks*2*0.25*size.usdPerPoint),arithmeticOnly:true}));
- for(const flips of [0,1,2]){const selected=winners.slice(0,flips);const delta=selected.reduce((a,t)=>a+(t.netUsd-(-10*size.usdPerPoint-25)),0);console.log("P4D_WINNER_FLIP "+JSON.stringify({strategy,mode,winnersFlipped:flips,actualWinnersAvailable:winners.length,netUsd:flips<=winners.length?money(base-delta):null,arithmeticOnly:true}));}
+ console.log("P4D_AUDIT_SUMMARY "+JSON.stringify({strategy,position:size.label,mllUsd:mll,mode,executed:n,netUsd:base,totalBaselineCostsUsd:n*friction,entryMinuteExits:tradeAudit.filter(t=>t.entryMinuteExit).length,entryMinuteStops:tradeAudit.filter(t=>t.entryMinuteExit&&t.exitReason==="STOP").length,entryMinuteTargets:tradeAudit.filter(t=>t.entryMinuteExit&&t.exitReason==="TARGET").length,exitReasons:Object.fromEntries([...new Set(tradeAudit.map(t=>t.exitReason))].map(reason=>[reason,tradeAudit.filter(t=>t.exitReason===reason).length])),scorecardNetUsd:scorecard.netUsd,scorecardResearchStatus:scorecard.researchStatus}));
+ for(const extra of [0,2.5,5,10,20])console.log("P4D_COST_STRESS "+JSON.stringify({strategy,position:size.label,mllUsd:mll,mode,additionalCostPerTradeUsd:extra,netUsd:money(base-n*extra),arithmeticOnly:true}));
+ for(const ticks of [0,1,2,3])console.log("P4D_SLIPPAGE_STRESS "+JSON.stringify({strategy,position:size.label,mllUsd:mll,mode,additionalAdverseTicksPerSide:ticks,netUsd:money(base-n*ticks*2*0.25*size.usdPerPoint),arithmeticOnly:true}));
+ for(const flips of [0,1,2]){const selected=winners.slice(0,flips);const delta=selected.reduce((a,t)=>a+(t.netUsd-(-10*size.usdPerPoint-friction)),0);console.log("P4D_WINNER_FLIP "+JSON.stringify({strategy,position:size.label,mllUsd:mll,mode,winnersFlipped:flips,actualWinnersAvailable:winners.length,netUsd:flips<=winners.length?money(base-delta):null,arithmeticOnly:true}));}
  console.log("STRATEGY_SCORECARD "+JSON.stringify(scorecard));
  console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
