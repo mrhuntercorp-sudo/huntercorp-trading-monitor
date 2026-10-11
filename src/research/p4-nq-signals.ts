@@ -15,15 +15,15 @@ function check(s:P4Session){if(!s.contractVerified||!s.calendarVerified)throw Er
   const t=parts(x.timestampMs);if(t.date!==first.date||t.minute!==570+i||t.minute>=960||(i>0&&x.timestampMs-b[i-1]!.timestampMs!==MIN))throw Error("GAP_OR_SESSION_BOUNDARY");
  }
 }
-function signal(strategy:P4Strategy,dir:P4Direction,b:readonly P3Bar[],i:number):P4Signal|null{
+function signal(strategy:P4Strategy,dir:P4Direction,b:readonly P3Bar[],i:number,stopPoints:number):P4Signal|null{
  const next=b[i+1];if(!next)return null;
- const entry=next.open,stop=entry+(dir==="LONG"?-10:10),target=entry+(dir==="LONG"?40:-40);
+ const entry=next.open,stop=entry+(dir==="LONG"?-stopPoints:stopPoints),target=entry+(dir==="LONG"?40:-40);
  // Signal bar is complete at the next bar's timestamp; only the next bar's open is an assumed fill.
  return {strategy,direction:dir,signalTime:b[i]!.timestampMs,entryTime:next.timestampMs,entryPrice:entry,stopPrice:stop,targetPrice:target,timeExitMs:Math.min(next.timestampMs+30*MIN, b[0]!.timestampMs+385*MIN)};
 }
 function allowed(b:readonly P3Bar[],i:number,from:number,to:number){const t=parts(b[i]!.timestampMs).minute;return t>=from&&t<=to&&t<945&&i+1<b.length&&parts(b[i+1]!.timestampMs).minute<960;}
 function mean(xs:number[]){return xs.reduce((a,b)=>a+b,0)/xs.length;}
-export function generateP4Signals(s:P4Session,strategy:P4Strategy):P4Signal[]{
+export function generateP4Signals(s:P4Session,strategy:P4Strategy,stopPoints:10|40=10):P4Signal[]{
  check(s);const b=s.bars;if(!b.length)return [];
  for(let i=0;i+1<b.length;i++){
   let dir:P4Direction|null=null;
@@ -55,7 +55,7 @@ export function generateP4Signals(s:P4Session,strategy:P4Strategy):P4Signal[]{
    if(b[i]!.close<=center-2*sigma&&b[i]!.close>b[i]!.open)dir="LONG";
    else if(b[i]!.close>=center+2*sigma&&b[i]!.close<b[i]!.open)dir="SHORT";
   }else throw Error("UNKNOWN_STRATEGY");
-  if(dir){const x=signal(strategy,dir,b,i);return x?[x]:[];}
+  if(dir){const x=signal(strategy,dir,b,i,stopPoints);return x?[x]:[];}
  }
  return [];
 }
