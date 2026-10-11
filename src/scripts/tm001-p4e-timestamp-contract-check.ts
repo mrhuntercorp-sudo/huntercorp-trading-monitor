@@ -5,8 +5,8 @@ const path="src/scripts/tm001-p4d-trade-execution-audit.ts";
 const source=readFileSync(path,"utf8");
 assert.match(source,/let exit=t\.exit,reason=t\.exitReason,actualExitTime=t\.exitTime;/);
 assert.match(source,/reason=crossed\.name;\s*actualExitTime=b\.timestampMs;\s*break;/);
-assert.match(source,/exitTime:new Date\(actualExitTime\)\.toISOString\(\)/);
-assert.match(source,/holdingMinutes:\(actualExitTime-t\.entryTime\)\/60000/);
+assert.match(source,/exitTime:new Date\(auditedExitTime\(/);
+assert.match(source,/holdingMinutes:auditHoldingMinutes\(t\.entryTime,actualExitTime\)/);
 assert.match(source,/entryMinuteExit:actualExitTime===t\.entryTime/);
 // Static source contract guards the integration points; it does NOT execute the risk engine.
 const entry=Date.parse("2026-09-21T14:22:00Z");
