@@ -96,7 +96,7 @@ for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THR
   const idx=bars.findIndex(b=>b.timestampMs===t.entryTime);
   if(idx<0)throw Error("MISSING_ENTRY "+t.date);
   const sign=t.direction==="LONG"?1:-1;
-  let exit=t.exit,reason=t.exitReason;
+  let exit=t.exit,reason=t.exitReason,actualExitTime=t.exitTime;
   const entryEquity=balance-friction;
   // Price risk is evaluated through the independent stop/target exit minute.
   // If the threshold and strategy exit share a bar, ordering is unknowable.
@@ -125,11 +125,12 @@ for(const size of sizes)for(const mll of [3000] as const)for(const mode of ["THR
    if(b.timestampMs===t.exitTime||stopRiskCollision||stopTargetCollision||gapThroughStop||gapThroughRisk)ambiguousRiskBars++;
    exit=mode==="THRESHOLD_PROXY"?riskPrice:worst;
    reason=crossed.name;
+   actualExitTime=b.timestampMs;
    break;
   }
   const pnl=(exit-t.entry)*sign*size.usdPerPoint-friction;
   balance+=pnl;executed++;
-  tradeAudit.push({date:t.date,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(t.exitTime).toISOString(),direction:t.direction,entry:t.entry,exit,exitReason:reason,holdingMinutes:(t.exitTime-t.entryTime)/60000,netUsd:money(pnl),entryMinuteExit:t.entryMinuteExit,stopTargetCollision:t.ambiguous});
+  tradeAudit.push({date:t.date,entryTime:new Date(t.entryTime).toISOString(),exitTime:new Date(actualExitTime).toISOString(),direction:t.direction,entry:t.entry,exit,exitReason:reason,holdingMinutes:(actualExitTime-t.entryTime)/60000,netUsd:money(pnl),entryMinuteExit:actualExitTime===t.entryTime,stopTargetCollision:t.ambiguous});
   peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
   if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
   else if(reason==="OPERATING"){firstOperatingStop=t.date;haltToday=true;}
