@@ -1,4 +1,5 @@
 import {generateP4Signals,type P4Strategy} from "../research/p4-nq-signals.js";
+import {firstRiskCrossing,type RiskTrigger} from "../research/p4e-risk-crossing.js";
 import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
@@ -65,11 +66,6 @@ for(const strategy of strategies){
 // Legacy SCREEN output retired: non-authoritative friction and no account risk model.
 const money=(n:number)=>Math.round(n*100)/100;
 const sizes=[{label:"5_MNQ",usdPerPoint:10,commission:10,slippage:15},{label:"1_NQ",usdPerPoint:20,commission:5,slippage:30},{label:"2_NQ",usdPerPoint:40,commission:10,slippage:60}] as const;
-type Trigger="MLL"|"OPERATING"|"DAILY";
-function crossing(entryEquity:number,adverseEquity:number,levels:{name:Trigger;level:number}[]){
- // Higher equity thresholds are encountered first on a monotonically adverse path.
- return levels.filter(x=>entryEquity>x.level&&adverseEquity<=x.level).sort((a,b)=>b.level-a.level)[0]??null;
-}
 for(const strategy of strategies){
 const ordered=[...allSignals.get(strategy)!].sort((a,b)=>a.entryTime-b.entryTime);
 console.log("INTEGRATED_ASSUMPTIONS "+JSON.stringify({signals:ordered.length,startingBalanceUsd:50000,startingBalanceIllustrative:true,positions:sizes,thresholdModes:["THRESHOLD_PROXY","WORST_BAR_STRESS"],dailyBudgetFractionOfMll:.15,operatingBudgetFractionOfMll:.5,operatingFloor:"EOD_HIGH_MINUS_HALF_MLL_INTERNAL_ONLY",mllFloor:"MIN(START,EOD_HIGH_MINUS_MLL)",dailyFloor:"DAY_START_MINUS_15_PERCENT_MLL",slippageTicksPerSide:3,commissionUnverified:true,limitations:"Minute OHLC cannot order target, stop and risk crossings within the same minute. Threshold proxy assumes execution exactly at limit; stress assumes worst bar extreme. Neither is a tradable fill prediction. Signal selection is independent of risk halts. In-sample only; no account certification."}));
@@ -87,7 +83,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   const mllFloor=Math.min(start,highEod-mll);
   const operatingFloor=highEod-mll*.5;
   const dailyFloor=dayStart-mll*.15;
-  const levels:{name:Trigger;level:number}[]=[{name:"MLL",level:mllFloor},{name:"OPERATING",level:operatingFloor},{name:"DAILY",level:dailyFloor}];
+  const levels:{name:RiskTrigger;level:number}[]=[{name:"MLL",level:mllFloor},{name:"OPERATING",level:operatingFloor},{name:"DAILY",level:dailyFloor}];
   if(balance<=mllFloor||balance<=operatingFloor||balance<=dailyFloor){
    pretradeRejects++;skipped++;haltToday=true;
    if(balance<=mllFloor)firstMllTouch=t.date;
@@ -108,7 +104,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
    const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
    // Observed bar extreme is a stress envelope, not necessarily reachable after an earlier modeled exit.
    minObservedWorstBarCushion=Math.min(minObservedWorstBarCushion,adverseEquity-mllFloor);
-   const crossed=crossing(entryEquity,adverseEquity,levels);
+   const crossed=firstRiskCrossing(entryEquity,adverseEquity,levels);
    const modeledEquity=crossed&&mode==="THRESHOLD_PROXY"?crossed.level:adverseEquity;
    minCushion=Math.min(minCushion,modeledEquity-mllFloor);
    if(!crossed)continue;
