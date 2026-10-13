@@ -44,7 +44,7 @@ function simulate(day:readonly MinuteBar[],index:number,direction:Direction):Tra
 let eligible=0,excluded=0,baselineParityFailures=0;
 console.log("=== TM001 MULTI-STRATEGY NY OPEN COMPARISON ===");
 console.log("IN_SAMPLE | CACHE_ONLY | ZERO_API | ZERO_ORDERS | RESEARCH_PROXY_NOT_NATIVE_STRATEGY_PNL");
-console.log("COMPARISON_RULES",JSON.stringify({entryWindowEt:"09:30-11:00",entryClassification:"NEXT_BAR_OPEN",allSignalsGeneratedFromCompleteRthButCausalFunctionsOnly,commonExit:"40pt_STOP_40pt_TARGET_10_BARS_2pt_COST",selection:"FIRST_ELIGIBLE_SIGNAL_PER_STRATEGY_PER_DAY",p4OriginalStopsAnd30MinuteExitsReplacedForComparison:true,orbOriginalTargetsAndSessionExitsReplacedForComparison:true,notFrozenOriginalStrategyBacktests:true}));
+console.log("COMPARISON_RULES",JSON.stringify({entryWindowEt:"09:30-11:00",entryClassification:"NEXT_BAR_OPEN",allSignalsGeneratedFromCompleteRthButCausalFunctionsOnly:true,commonExit:"40pt_STOP_40pt_TARGET_10_BARS_2pt_COST",selection:"FIRST_ELIGIBLE_SIGNAL_PER_STRATEGY_PER_DAY",p4OriginalStopsAnd30MinuteExitsReplacedForComparison:true,orbOriginalTargetsAndSessionExitsReplacedForComparison:true,notFrozenOriginalStrategyBacktests:true}));
 for(const date of dates){
  const ticker=provisionalNqContract(date),prior=iso(ms(date)-86400000);
  const bars=[...await load(ticker,prior),...await load(ticker,date)].sort((a,b)=>a.timestampMs-b.timestampMs);
