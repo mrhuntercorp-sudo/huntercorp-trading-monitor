@@ -1,5 +1,6 @@
 import {generateP4Signals,type P4Strategy} from "../research/p4-nq-signals.js";
-import {firstRiskCrossing,type RiskTrigger} from "../research/p4e-risk-crossing.js";
+import {firstRiskCrossing} from "../research/p4e-risk-crossing.js";
+import {accountRiskFloors,nextEodHigh} from "../research/p4e-account-floors.js";
 import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
@@ -76,14 +77,12 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
  let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion:number=mll,minObservedWorstBarCushion:number=mll,ambiguousRiskBars=0,stopTargetCollisionBars=0,stopRiskCollisionBars=0,gapThroughStopBars=0,gapThroughRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
   if(t.date!==currentDate){
-   if(currentDate)highEod=Math.max(highEod,balance);
+   if(currentDate)highEod=nextEodHigh(highEod,balance);
    currentDate=t.date;dayStart=balance;haltToday=false;
   }
   if(firstMllTouch||firstOperatingStop||haltToday){skipped++;continue;}
-  const mllFloor=Math.min(start,highEod-mll);
-  const operatingFloor=highEod-mll*.5;
-  const dailyFloor=dayStart-mll*.15;
-  const levels:{name:RiskTrigger;level:number}[]=[{name:"MLL",level:mllFloor},{name:"OPERATING",level:operatingFloor},{name:"DAILY",level:dailyFloor}];
+  const levels=accountRiskFloors({start,highEod,dayStart,mll});
+  const mllFloor=levels[0]!.level,operatingFloor=levels[1]!.level,dailyFloor=levels[2]!.level;
   if(balance<=mllFloor||balance<=operatingFloor||balance<=dailyFloor){
    pretradeRejects++;skipped++;haltToday=true;
    if(balance<=mllFloor)firstMllTouch=t.date;
@@ -137,7 +136,7 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   if(balance<=mllFloor&&firstMllTouch===null){firstMllTouch=t.date;haltToday=true;}
   if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
- if(currentDate)highEod=Math.max(highEod,balance);
+ if(currentDate)highEod=nextEodHigh(highEod,balance);
  const scorecard:StrategyScorecard={
   strategyId:strategy,strategyVersion:"p4a-fixed-first-pass-in-sample",
   position:size.label,mllUsd:mll,fillMode:mode,
