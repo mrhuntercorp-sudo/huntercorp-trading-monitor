@@ -11,7 +11,7 @@ eq(pretradeAccountDecision(s).dailyFloor,49925,"daily floor recalculated");
 s=settleAccountTrade(s,-450,"DAILY");eq(s.haltToday,true,"daily stop halts current day");eq(pretradeAccountDecision(s).allowed,false,"daily halt prevents new trade");
 s=beginAccountDate(s,"2026-09-23");eq(s.haltToday,false,"daily halt resets next day");eq(s.highEod,50375,"EOD high never ratchets downward");
 eq(s.dayStart,49925,"new day starts at closed balance");eq(pretradeAccountDecision(s).allowed,true,"new day permitted if floors clear");
-let operating=beginAccountDate({...base,balance:50000,highEod:51000},"2026-09-21");
+let operating=beginAccountDate({...base,balance:49400,highEod:51000},"2026-09-21");
 eq(pretradeAccountDecision(operating).allowed,false,"pretrade operating breach denied");
 operating=rejectPretrade(operating);eq(operating.firstOperatingStop,"2026-09-21","operating breach recorded");
 operating=beginAccountDate(operating,"2026-09-22");eq(pretradeAccountDecision(operating).allowed,false,"operating stop persists across days");
