@@ -6,8 +6,8 @@ import {provisionalClosedDates,provisionalNqContract} from "./massive-nq-calenda
 
 const root=process.cwd();
 const manifest=readFileSync(resolve(root,"docs/TM001-P4E-PROVENANCE-FREEZE.md"),"utf8");
-const sourceBlock=manifest.match(/## Production source SHA-256[^]*?```text\n([^]*?)\n```/);
-const dataBlock=manifest.match(/## Exact requested historical-cache dependencies[^]*?```text\n([^]*?)\n```/);
+const sourceBlock=manifest.match(/## Production source SHA-256[^]*?```text\r?\n([^]*?)\r?\n```/);
+const dataBlock=manifest.match(/## Exact requested historical-cache dependencies[^]*?```text\r?\n([^]*?)\r?\n```/);
 if(!sourceBlock||!dataBlock)throw Error("PROVENANCE_MANIFEST_FORMAT_INVALID");
 const sourceRows=sourceBlock[1]!.trim().split(/\r?\n/);
 const dataRows=dataBlock[1]!.trim().split(/\r?\n/);
