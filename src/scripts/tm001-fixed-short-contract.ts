@@ -1,0 +1,18 @@
+import {strict as assert} from "node:assert";
+import type {MinuteBar} from "../market/types.js";
+import {simulateFixedShort,FIXED_SHORT_RULES} from "../research/fixed-short-feasibility.js";
+const base=Date.parse("2026-10-05T13:30:00Z");
+const b=(i:number,o=100,h=101,l=99,c=100):MinuteBar=>({contractTicker:"NQZ6",productCode:"NQ",timestampMs:base+i*60000,sessionEndDate:"2026-10-05",open:o,high:h,low:l,close:c,volume:100});
+const bars=(first:MinuteBar)=>[b(0),first,...Array.from({length:9},(_,i)=>b(i+2))];
+let checks=0;const eq=(a:unknown,v:unknown)=>{assert.deepEqual(a,v);checks++;};
+const stop=simulateFixedShort(bars(b(1,100,141,59,100)),0)!;
+eq(stop.reason,"STOP");eq(stop.ambiguousBar,true);eq(stop.netPoints,-42);
+const target=simulateFixedShort(bars(b(1,100,101,59,80)),0)!;
+eq(target.reason,"TARGET");eq(target.netPoints,38);
+const time=simulateFixedShort(bars(b(1)),0)!;
+eq(time.reason,"TIME");eq(time.exitIndex,10);eq(time.netPoints,-2);
+eq(simulateFixedShort([b(0),b(1)],0),null);
+const gap=simulateFixedShort([b(0),b(1),b(2,150,151,149,150),...Array.from({length:8},(_,i)=>b(i+3))],0)!;
+eq(gap.reason,"STOP");eq(gap.netPoints,-52);
+eq(FIXED_SHORT_RULES.maxBars,10);
+console.log("TM001 FIXED SHORT CONTRACT GREEN "+checks+"/"+checks+" | ZERO_API | ZERO_TRADES");
