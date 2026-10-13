@@ -68,7 +68,7 @@ function report(window:string,horizon:10|30){
  let equity=0,peak=0,drawdown=0;
  for(const v of values){equity+=v.net;peak=Math.max(peak,equity);drawdown=Math.max(drawdown,peak-equity);}
  const boundaries=windows.find(w=>w.name===window);
- const crossed=boundaries?subset.filter(t=>{const exit=horizon===10?t.baseline.exitIndex:t.extended!.exitIndex;return t.exitMinutes>=boundaries.end&&horizon===10;}).length:null;
+ const crossed=boundaries?subset.filter(t=>{return t.exitMinutes>=boundaries.end&&horizon===10;}).length:null;
  console.log("WINDOW_RESULT",JSON.stringify({window,maxHoldMinutes:horizon,trades:subset.length,distinctSessions:sessions.length,wins:values.filter(v=>v.net>0).length,losses:values.filter(v=>v.net<0).length,stops:values.filter(v=>v.reason==="STOP").length,targets:values.filter(v=>v.reason==="TARGET").length,timeExits:values.filter(v=>v.reason==="TIME").length,totalNetPoints:round(values.reduce((s,v)=>s+v.net,0)),averageNetPointsPerTrade:values.length?round(values.reduce((s,v)=>s+v.net,0)/values.length):null,positiveSessions:daily.filter(n=>n>0).length,negativeSessions:daily.filter(n=>n<0).length,worstSessionPoints:daily.length?round(Math.min(...daily)):null,maxClosedTradeDrawdownPoints:round(drawdown),baselineExitsPastWindow:crossed,extended30UsesBaselineEntries:true,notValidatedPnl:true}));
 }
 for(const w of [...windows.map(w=>w.name),"ALL_RTH"])for(const h of [10,30] as const)report(w,h);
