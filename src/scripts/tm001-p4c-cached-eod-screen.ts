@@ -1,6 +1,6 @@
 import {generateP4Signals,type P4Strategy} from "../research/p4-nq-signals.js";
 import {replayP4TradeRisk} from "../research/p4e-trade-risk-replay.js";
-import {accountRiskFloors,nextEodHigh} from "../research/p4e-account-floors.js";
+import {beginAccountDate,pretradeAccountDecision,rejectPretrade,settleAccountTrade,closeAccountSample,type AccountState} from "../research/p4e-account-state.js";
 import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
 import { auditRthCoverage } from "../research/rth-coverage.js";
@@ -72,27 +72,21 @@ const ordered=[...allSignals.get(strategy)!].sort((a,b)=>a.entryTime-b.entryTime
 console.log("INTEGRATED_ASSUMPTIONS "+JSON.stringify({signals:ordered.length,startingBalanceUsd:50000,startingBalanceIllustrative:true,positions:sizes,thresholdModes:["THRESHOLD_PROXY","WORST_BAR_STRESS"],dailyBudgetFractionOfMll:.15,operatingBudgetFractionOfMll:.5,operatingFloor:"EOD_HIGH_MINUS_HALF_MLL_INTERNAL_ONLY",mllFloor:"MIN(START,EOD_HIGH_MINUS_MLL)",dailyFloor:"DAY_START_MINUS_15_PERCENT_MLL",slippageTicksPerSide:3,commissionUnverified:true,limitations:"Minute OHLC cannot order target, stop and risk crossings within the same minute. Threshold proxy assumes execution exactly at limit; stress assumes worst bar extreme. Neither is a tradable fill prediction. Signal selection is independent of risk halts. In-sample only; no account certification."}));
 for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of ["THRESHOLD_PROXY","WORST_BAR_STRESS"] as const){
  const start=50000,friction=size.commission+size.slippage;
- let balance=start,highEod=start,dayStart=start,currentDate="",haltToday=false;
- let firstMllTouch:string|null=null,firstOperatingStop:string|null=null;
+ let state:AccountState={start,mll,balance:start,highEod:start,dayStart:start,currentDate:"",haltToday:false,firstMllTouch:null,firstOperatingStop:null};
  let executed=0,skipped=0,dailyCutoffDays=0,stopHits=0,targets=0,peak=start,maxClosedDrawdown=0,minCushion:number=mll,minObservedWorstBarCushion:number=mll,ambiguousRiskBars=0,stopTargetCollisionBars=0,stopRiskCollisionBars=0,gapThroughStopBars=0,gapThroughRiskBars=0,pretradeRejects=0;
  for(const t of ordered){
-  if(t.date!==currentDate){
-   if(currentDate)highEod=nextEodHigh(highEod,balance);
-   currentDate=t.date;dayStart=balance;haltToday=false;
-  }
-  if(firstMllTouch||firstOperatingStop||haltToday){skipped++;continue;}
-  const levels=accountRiskFloors({start,highEod,dayStart,mll});
-  const mllFloor=levels[0]!.level,operatingFloor=levels[1]!.level,dailyFloor=levels[2]!.level;
-  if(balance<=mllFloor||balance<=operatingFloor||balance<=dailyFloor){
-   pretradeRejects++;skipped++;haltToday=true;
-   if(balance<=mllFloor)firstMllTouch=t.date;
-   else if(balance<=operatingFloor)firstOperatingStop=t.date;
+  state=beginAccountDate(state,t.date);
+  const decision=pretradeAccountDecision(state);
+  if(!decision.allowed){
+   skipped++;
+   if(decision.pretradeReject){pretradeRejects++;state=rejectPretrade(state);}
    continue;
   }
+  const {levels,mllFloor,operatingFloor}=decision;
   const bars=byDate.get(t.date)!;
   const idx=bars.findIndex(b=>b.timestampMs===t.entryTime);
   if(idx<0)throw Error("MISSING_ENTRY "+t.date);
-  const replay=replayP4TradeRisk({bars,entryIndex:idx,direction:t.direction,entry:t.entry,stop:t.stop,target:t.target,plannedExit:t.exit,plannedExitTime:t.exitTime,plannedExitReason:t.exitReason,balance,friction,usdPerPoint:size.usdPerPoint,levels,mllFloor,mode});
+  const replay=replayP4TradeRisk({bars,entryIndex:idx,direction:t.direction,entry:t.entry,stop:t.stop,target:t.target,plannedExit:t.exit,plannedExitTime:t.exitTime,plannedExitReason:t.exitReason,balance:state.balance,friction,usdPerPoint:size.usdPerPoint,levels,mllFloor,mode});
   const {pnl,reason}=replay;
   minCushion=Math.min(minCushion,replay.minCushion);
   minObservedWorstBarCushion=Math.min(minObservedWorstBarCushion,replay.minObservedWorstBarCushion);
@@ -101,33 +95,28 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   stopRiskCollisionBars+=replay.stopRiskCollisionBars;
   gapThroughStopBars+=replay.gapThroughStopBars;
   gapThroughRiskBars+=replay.gapThroughRiskBars;
-  balance+=pnl;executed++;
-  peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
-  if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
-  else if(reason==="OPERATING"){firstOperatingStop=t.date;haltToday=true;}
-  else if(reason==="DAILY"){dailyCutoffDays++;haltToday=true;}
+  state=settleAccountTrade(state,pnl,reason);executed++;
+  peak=Math.max(peak,state.balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-state.balance);
+  if(reason==="DAILY")dailyCutoffDays++;
   else if(reason==="STOP")stopHits++;
   else if(reason==="TARGET")targets++;
-  // Stress fills may gap through the higher-priority trigger and violate deeper limits.
-  if(balance<=mllFloor&&firstMllTouch===null){firstMllTouch=t.date;haltToday=true;}
-  if(balance<=operatingFloor&&firstOperatingStop===null){firstOperatingStop=t.date;haltToday=true;}
  }
- if(currentDate)highEod=nextEodHigh(highEod,balance);
+ state=closeAccountSample(state);
  const scorecard:StrategyScorecard={
   strategyId:strategy,strategyVersion:"p4a-fixed-first-pass-in-sample",
   position:size.label,mllUsd:mll,fillMode:mode,
   candidateSessions:dates.length,eligibleSessions:byDate.size,signals:ordered.length,executed,skipped,pretradeRejects,
-  netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),
+  netUsd:money(state.balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),
   minimumModeledEodMllCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),
   stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,
-  executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,
+  executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch:state.firstMllTouch,firstOperatingStop:state.firstOperatingStop,
   accountProfitTargetNotModeled:true,fillCertified:false,outOfSampleValidated:false,
-  researchStatus:firstMllTouch||firstOperatingStop||balance<start?"REJECT":"RESEARCH_MORE"
+  researchStatus:state.firstMllTouch||state.firstOperatingStop||state.balance<start?"REJECT":"RESEARCH_MORE"
  };
  const scorecardErrors=validateScorecard(scorecard);
  if(scorecardErrors.length)throw Error("SCORECARD_VALIDATION_FAILED "+JSON.stringify({position:size.label,mll,mode,errors:scorecardErrors}));
  console.log("STRATEGY_SCORECARD "+JSON.stringify(scorecard));
- console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch,firstOperatingStop,status:firstMllTouch?"MLL_TOUCH":firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
+ console.log("INTEGRATED_SURVIVAL "+JSON.stringify({mode,position:size.label,mllUsd:mll,signalsAvailable:ordered.length,executed,skipped,pretradeRejects,netUsd:money(state.balance-start),maxClosedEquityDrawdownUsd:money(maxClosedDrawdown),minimumModeledIntradayCushionUsd:money(minCushion),minimumObservedWorstBarCushionUsd:money(minObservedWorstBarCushion),observedWorstBarCushionIsStressEnvelope:true,dailyCutoffDays,stopHits,targets,ambiguousRiskBars,stopTargetCollisionBars,stopRiskCollisionBars,gapThroughStopBars,gapThroughRiskBars,executionOrderUnresolved:ambiguousRiskBars>0,firstMllTouch:state.firstMllTouch,firstOperatingStop:state.firstOperatingStop,status:state.firstMllTouch?"MLL_TOUCH":state.firstOperatingStop?"OPERATING_STOP":"SURVIVED_SAMPLE",accountProfitTargetNotModeled:true}));
 }
 }
 console.log("TM001 P4c FOUR-CANDIDATE EOD SCREEN COMPLETE | CACHE ONLY | ZERO TRADES | NOT CERTIFIED");
