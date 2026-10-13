@@ -1,5 +1,5 @@
 import {generateP4Signals,type P4Strategy} from "../research/p4-nq-signals.js";
-import {firstRiskCrossing} from "../research/p4e-risk-crossing.js";
+import {replayP4TradeRisk} from "../research/p4e-trade-risk-replay.js";
 import {accountRiskFloors,nextEodHigh} from "../research/p4e-account-floors.js";
 import {validateScorecard,type StrategyScorecard} from "../research/strategy-scorecard.js";
 import { CachedHistoricalDays } from "../research/historical-cache.js";
@@ -92,39 +92,15 @@ for(const size of sizes)for(const mll of [2000,3000] as const)for(const mode of 
   const bars=byDate.get(t.date)!;
   const idx=bars.findIndex(b=>b.timestampMs===t.entryTime);
   if(idx<0)throw Error("MISSING_ENTRY "+t.date);
-  const sign=t.direction==="LONG"?1:-1;
-  let exit=t.exit,reason=t.exitReason;
-  const entryEquity=balance-friction;
-  // Price risk is evaluated through the independent stop/target exit minute.
-  // If the threshold and strategy exit share a bar, ordering is unknowable.
-  for(const b of bars.slice(idx)){
-   if(b.timestampMs>t.exitTime||(t.exitReason==="TIME_EXIT"&&b.timestampMs===t.exitTime))break;
-   const worst=t.direction==="LONG"?b.low:b.high;
-   const adverseEquity=balance+(worst-t.entry)*sign*size.usdPerPoint-friction;
-   // Observed bar extreme is a stress envelope, not necessarily reachable after an earlier modeled exit.
-   minObservedWorstBarCushion=Math.min(minObservedWorstBarCushion,adverseEquity-mllFloor);
-   const crossed=firstRiskCrossing(entryEquity,adverseEquity,levels);
-   const modeledEquity=crossed&&mode==="THRESHOLD_PROXY"?crossed.level:adverseEquity;
-   minCushion=Math.min(minCushion,modeledEquity-mllFloor);
-   if(!crossed)continue;
-   const stopTouched=t.direction==="LONG"?b.low<=t.stop:b.high>=t.stop;
-   const targetTouched=t.direction==="LONG"?b.high>=t.target:b.low<=t.target;
-   const stopTargetCollision=stopTouched&&targetTouched;
-   const stopRiskCollision=stopTouched;
-   const gapThroughStop=t.direction==="LONG"?b.open<=t.stop:b.open>=t.stop;
-   const riskPrice=t.entry+(crossed.level-balance+friction)/(sign*size.usdPerPoint);
-   const gapThroughRisk=t.direction==="LONG"?b.open<=riskPrice:b.open>=riskPrice;
-   if(stopTargetCollision)stopTargetCollisionBars++;
-   if(stopRiskCollision)stopRiskCollisionBars++;
-   if(gapThroughStop)gapThroughStopBars++;
-   if(gapThroughRisk)gapThroughRiskBars++;
-   // These flags report uncertainty only: the proxy still cannot determine the intrabar path or executable fill.
-   if(b.timestampMs===t.exitTime||stopRiskCollision||stopTargetCollision||gapThroughStop||gapThroughRisk)ambiguousRiskBars++;
-   exit=mode==="THRESHOLD_PROXY"?riskPrice:worst;
-   reason=crossed.name;
-   break;
-  }
-  const pnl=(exit-t.entry)*sign*size.usdPerPoint-friction;
+  const replay=replayP4TradeRisk({bars,entryIndex:idx,direction:t.direction,entry:t.entry,stop:t.stop,target:t.target,plannedExit:t.exit,plannedExitTime:t.exitTime,plannedExitReason:t.exitReason,balance,friction,usdPerPoint:size.usdPerPoint,levels,mllFloor,mode});
+  const {pnl,reason}=replay;
+  minCushion=Math.min(minCushion,replay.minCushion);
+  minObservedWorstBarCushion=Math.min(minObservedWorstBarCushion,replay.minObservedWorstBarCushion);
+  ambiguousRiskBars+=replay.ambiguousRiskBars;
+  stopTargetCollisionBars+=replay.stopTargetCollisionBars;
+  stopRiskCollisionBars+=replay.stopRiskCollisionBars;
+  gapThroughStopBars+=replay.gapThroughStopBars;
+  gapThroughRiskBars+=replay.gapThroughRiskBars;
   balance+=pnl;executed++;
   peak=Math.max(peak,balance);maxClosedDrawdown=Math.max(maxClosedDrawdown,peak-balance);
   if(reason==="MLL"){firstMllTouch=t.date;haltToday=true;}
