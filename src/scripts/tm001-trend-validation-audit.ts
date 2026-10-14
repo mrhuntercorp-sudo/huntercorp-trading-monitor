@@ -59,6 +59,15 @@ for(const period of periods){
     if(stopHit){ambiguous=targetHit;exit=sign===1?Math.min(stopPrice,b.open):Math.max(stopPrice,b.open);exitIndex=j;reason="STOP";break;}
     if(targetHit){exit=s.targetPrice;exitIndex=j;reason="TARGET";break;}
    }
+   if(period.name==="OOS1_EXPOSED_NOT_FRESH"){
+    const future=day.filter(b=>b.timestampMs>=s.entryTime&&b.timestampMs<deadline);
+    const high=Math.max(...future.map(b=>b.high)),low=Math.min(...future.map(b=>b.low));
+    const postStop=reason==="STOP"?future.filter(b=>b.timestampMs>day[exitIndex]!.timestampMs):[];
+    const targetAfterStop=postStop.some(b=>sign===1?b.high>=s.targetPrice:b.low<=s.targetPrice);
+    const maxFavorable=sign===1?high-s.entryPrice:s.entryPrice-low;
+    const maxAdverse=sign===1?s.entryPrice-low:high-s.entryPrice;
+    console.log("OOS_FAILURE_DIAGNOSTIC",JSON.stringify({date,stopPoints,direction:s.direction,entryTime:clock(s.entryTime),exitTime:clock(day[exitIndex]!.timestampMs),reason,entryBarRange:round(day[i]!.high-day[i]!.low),entryBarBody:round(Math.abs(day[i]!.close-day[i]!.open)),entryBarClosedAgainstSignal:sign*(day[i]!.close-day[i]!.open)<0,firstFiveMinuteRange:round(Math.max(...future.slice(0,5).map(b=>b.high))-Math.min(...future.slice(0,5).map(b=>b.low))),full30mMaxFavorable:round(maxFavorable),full30mMaxAdverse:round(maxAdverse),targetTouchedWithin30m:sign===1?high>=s.targetPrice:low<=s.targetPrice,targetTouchedAfterStopBar:targetAfterStop,stopAndTargetSameBar:ambiguous,minuteBarsCannotDetermineIntrabarOrder:true,notPredictive:true}));
+   }
    const gross=(exit-s.entryPrice)*sign;
    trades.push({stopPoints,date,direction:s.direction,signalTime:clock(s.signalTime),entryTime:clock(s.entryTime),entry:s.entryPrice,stop:stopPrice,target:s.targetPrice,exitTime:clock(day[exitIndex]!.timestampMs),exit,reason,gross:round(gross),net:round(gross-2),mae:round(mae),mfe:round(mfe),stopEntryBar:reason==="STOP"&&exitIndex===i,ambiguous,entryBarRange:round(day[i]!.high-day[i]!.low),maxBarRange:round(maxBarRange)});
    }
