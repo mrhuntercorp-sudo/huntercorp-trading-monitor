@@ -10,7 +10,7 @@ function sample(){
  const xs:MinuteBar[]=[];
  for(let i=0;i<930;i++){const price=i<540?100:105;xs.push(bar(start+i*MIN,price));}
  const open=Date.parse("2026-10-12T13:30:00Z");
- for(let i=0;i<30;i++)xs.push(bar(open+i*MIN,i<15?103:110));
+ for(let i=0;i<30;i++)xs.push(bar(open+i*MIN,i<15?105:110));
  return xs;
 }
 test("London and full overnight use distinct levels and completed 15m closes",()=>{
