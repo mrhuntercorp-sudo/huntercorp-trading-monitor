@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {detectOvernightBreakout} from "../src/research/overnight-breakout-signals.js";
 import type {MinuteBar} from "../src/market/types.js";
 const MIN=60_000;
-const bar=(timestampMs:number,close:number):MinuteBar=>({timestampMs,open:close,high:close+0.25,low:close-0.25,close,volume:1});
+const bar=(timestampMs:number,close:number):MinuteBar=>({contractTicker:'NQZ6',productCode:'NQ',sessionEndDate:'2026-10-12',timestampMs,open:close,high:close+0.25,low:close-0.25,close,volume:1});
 function sample(){
  // Monday 2026-10-12, Sunday evening and Monday London in America/New_York (EDT).
  const start=Date.parse("2026-10-11T22:00:00Z");
