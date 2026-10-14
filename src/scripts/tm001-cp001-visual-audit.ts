@@ -80,7 +80,7 @@ for(const date of dates){
  const bars=aggregateCp001FiveMinute(day);
  const patterns:Pattern[]=[...detectCp001Flags(bars),...detectCp001Shoulders(bars)].sort((a,b)=>a.breakoutIndex-b.breakoutIndex);
  for(const p of patterns){
-  counts[p.pattern]++;
+  counts[p.pattern]=(counts[p.pattern]??0)+1;
   const metadata="poleStartIndex" in p?
    "Pole "+round(p.polePoints)+" pts | Retracement "+round(p.retracementRatio*100)+"% | Flag "+p.consolidationBars+" bars":
    "Head excess "+round(p.headExcessPoints)+" pts | Shoulder difference "+round(p.shoulderDifferencePoints)+" pts";
