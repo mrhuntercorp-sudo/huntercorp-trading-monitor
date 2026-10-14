@@ -24,7 +24,7 @@ for(const date of dates){
  if(all.length)daysWithAny++;if(shoulders.length)daysWithShoulders++;
  for(const p of all)counts[p.pattern]=(counts[p.pattern]??0)+1;
  overlapBars+=shoulders.filter(s=>flags.some(f=>f.breakoutIndex===s.breakoutIndex)).length;
- console.log("CP001_ARSENAL_DAY",JSON.stringify({date,total:all.length,patterns:all.map(p=>({pattern:p.pattern,breakoutIndex:p.breakoutIndex,confirmedUtc:new Date(p.breakoutTimeMs).toISOString(),...p}))}));
+ console.log("CP001_ARSENAL_DAY",JSON.stringify({date,total:all.length,patterns:all.map(p=>({...p,confirmedUtc:new Date(p.breakoutTimeMs).toISOString()}))}));
 }
 console.log("CP001_ARSENAL_SUMMARY",JSON.stringify({candidateDates:dates.length,eligible,daysWithAny,daysWithShoulders,counts,totalPatterns:Object.values(counts).reduce((a,b)=>a+b,0),sameBarFlagAndShoulderConfirmations:overlapBars,excluded,allExposed:true,requiresVisualReview:true,notProfitabilityBacktest:true}));
 console.log("CP001_ARSENAL_RULES",JSON.stringify({timeframe:"5_MINUTE",flags:"UNCHANGED",shoulders:"TWO_LEFT_TWO_RIGHT_CONFIRMED_PIVOTS",minHeadExcessPoints:10,maxShoulderDifferenceVsHeadExcess:0.35,patternSpanBars:[8,40],necklineBreakWindowBars:12,necklineBreak:"FIRST_CLOSE_CROSS_BY_ONE_TICK",headShoulderRulesFrozenForThisBaseline:true}));
