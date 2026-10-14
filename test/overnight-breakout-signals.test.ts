@@ -23,7 +23,7 @@ test("London and full overnight use distinct levels and completed 15m closes",()
  assert.equal(o?.signalCloseMs,Date.parse("2026-10-12T14:00:00Z"));
 });
 test("no signal from a wick without a close",()=>{
- const xs=sample();for(const b of xs.slice(930)){b.close=104;b.open=104;b.high=120;b.low=103;}
+ const xs=sample();for(const b of xs.slice(930)){b.close=105;b.open=105;b.high=120;b.low=103;}
  assert.equal(detectOvernightBreakout(xs,"2026-10-12","ORB002_LONDON"),null);
 });
 test("missing overnight minute fails closed",()=>{
