@@ -36,7 +36,7 @@ if(exists){
     auth.expiresUtcDate<today||
     !["NQZ6","NQH7"].includes(auth.contract)||
     !Array.isArray(auth.utcDates)||auth.utcDates.length<1||auth.utcDates.length>4||
-    auth.utcDates.some(d=>!dateValid(d)||d>auth.tradeDate)||
+    auth.utcDates.some(d=>!dateValid(d)||d>(auth?.tradeDate??""))||
     new Set(auth.utcDates).size!==auth.utcDates.length||auth.maxRequests!==4)
     throw Error("E015_INVALID_AUTHORIZATION");
 }
