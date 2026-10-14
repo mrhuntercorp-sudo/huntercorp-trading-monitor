@@ -33,7 +33,7 @@ if(exists){
  auth=JSON.parse(readFileSync(authPath,"utf8")) as Authorization;
  if(auth.schema!==1||!dateValid(auth.tradeDate)||!dateValid(auth.expiresUtcDate)||
     auth.tradeDate<"2026-10-15"||auth.tradeDate>=today||
-    auth.expiresUtcDate<today||auth.expiresUtcDate>auth.tradeDate.slice(0,7)+"-31"&&false||
+    auth.expiresUtcDate<today||
     !["NQZ6","NQH7"].includes(auth.contract)||
     !Array.isArray(auth.utcDates)||auth.utcDates.length<1||auth.utcDates.length>4||
     auth.utcDates.some(d=>!dateValid(d)||d>auth.tradeDate)||
