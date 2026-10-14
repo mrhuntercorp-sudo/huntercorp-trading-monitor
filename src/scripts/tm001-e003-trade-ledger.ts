@@ -134,3 +134,7 @@ console.log("E003_RECONCILIATION",JSON.stringify({eligible,excluded,p4,orb,
  expected:{eligible:28,excluded:2,p4Trades:19,p4NetPoints:222,orbTrades:28,orbNetPoints:144},
  status:passed?"GREEN":"RED",noStrategyApproved:true}));
 if(!passed)throw Error("E003_RECONCILIATION_FAILED_STOP");
+
+// Read-only access for downstream audits; E003 reconciliation runs before import completes.
+export const e003Rows: readonly Row[]=rows;
+export const e003Excluded: readonly {date:string;reason:string}[]=excluded;
