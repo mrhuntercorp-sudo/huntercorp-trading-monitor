@@ -16,7 +16,7 @@ const ms=(s:string)=>Date.parse(s+"T00:00:00Z"),iso=(t:number)=>new Date(t).toIS
 const dates:string[]=[];for(let t=ms("2026-10-02");dates.length<30;t-=86400000){const d=iso(t),w=new Date(t).getUTCDay();if(w!==0&&w!==6&&!provisionalClosedDates.has(d))dates.push(d);}dates.reverse();
 const loaded=new Map<string,Awaited<ReturnType<typeof cache.getDay>>>();
 async function load(ticker:string,date:string){const k=ticker+"|"+date;if(!loaded.has(k))loaded.set(k,await cache.getDay({ticker,productCode:"NQ"},date));return loaded.get(k)!;}
-type Trade={date:string;entryMinutes:number;net:number;reason:string;exitMinutes:number;ambiguous:boolean};
+type Trade={date:string;entryMinutes:number;net:number;reason:string;exitMinutes:number|null;ambiguous:boolean};
 const ids=["ORB5_NATIVE_40_80","TREND_NATIVE_10_40","WICK_NATIVE_FIRST_DAILY","WICK_LOCKED_NONOVERLAP"] as const;
 const trades=new Map<string,Trade[]>(ids.map(x=>[x,[]]));
 const clock=(b:MinuteBar)=>{const c=newYorkClock(b.timestampMs);return c.hour*60+c.minute;};
@@ -33,7 +33,7 @@ for(const date of dates){
  eligible++;
  const orb=backtestConservativeOrb(day,{openingRangeMinutes:5,stopPoints:40,targetPoints:80,contracts:1,friction:{roundTripCommissionUsd:40,slippageTicksPerSide:0}});
  if(orb.excluded.length)throw Error("ORB_NATIVE_EXCLUDED "+JSON.stringify(orb.excluded));
- for(const t of orb.trades){const entryMinutes=clock({timestampMs:t.entryTimestampMs} as MinuteBar);if(entryMinutes>=660){orbNonOpening++;continue;}if(t.ambiguousExit)orbAmbiguous++;trades.get(ids[0])!.push({date,entryMinutes,net:t.netPnlUsd/20,reason:t.exitReason,exitMinutes:960,ambiguous:t.ambiguousExit});}
+ for(const t of orb.trades){const entryMinutes=clock({timestampMs:t.entryTimestampMs} as MinuteBar);if(entryMinutes>=660){orbNonOpening++;continue;}if(t.ambiguousExit)orbAmbiguous++;trades.get(ids[0])!.push({date,entryMinutes,net:t.netPnlUsd/20,reason:t.exitReason,exitMinutes:null,ambiguous:t.ambiguousExit});}
  const trend=generateP4Signals({bars:day,contractVerified:true,calendarVerified:true},"SESSION_TREND_PULLBACK_V1",10);
  for(const s of trend){const entryIndex=day.findIndex(b=>b.timestampMs===s.entryTime);if(entryIndex<0)throw Error("TREND_ENTRY_MISSING");const entryMinutes=clock(day[entryIndex]!);if(entryMinutes>=660){trendNonOpening++;continue;}
   const sign=s.direction==="LONG"?1:-1;let exit=s.entryPrice,reason="TIME",exitIndex=entryIndex,ambiguous=false;
@@ -60,6 +60,6 @@ for(const date of dates){
 for(const id of ids){
  const a=trades.get(id)!,net=a.reduce((s,t)=>s+t.net,0),daily=a.map(t=>t.date).filter((d,i,arr)=>arr.indexOf(d)===i).map(d=>a.filter(t=>t.date===d).reduce((s,t)=>s+t.net,0));
  let equity=0,peak=0,dd=0;for(const t of a){equity+=t.net;peak=Math.max(peak,equity);dd=Math.max(dd,peak-equity);}
- console.log("NATIVE_STRATEGY_RESULT",JSON.stringify({strategy:id,trades:a.length,sessions:daily.length,wins:a.filter(t=>t.net>0).length,losses:a.filter(t=>t.net<0).length,stops:a.filter(t=>t.reason==="STOP").length,targets:a.filter(t=>t.reason==="TARGET").length,timeExits:a.filter(t=>t.reason==="TIME"||t.reason==="SESSION_END").length,netPoints:round(net),avgNetPoints:a.length?round(net/a.length):null,worstSessionPoints:daily.length?round(Math.min(...daily)):null,maxClosedTradeDrawdownPoints:round(dd),netWithoutBestSessionPoints:daily.length?round(net-Math.max(...daily)):null,ambiguousStopTargetBars:a.filter(t=>t.ambiguous).length,exitsAtOrAfter11:a.filter(t=>t.exitMinutes>=660).length,costStress:[0,1,2,4].map(extra=>({extraPointsPerTrade:extra,netPoints:round(net-extra*a.length)})),researchOnly:true}));
+ console.log("NATIVE_STRATEGY_RESULT",JSON.stringify({strategy:id,trades:a.length,sessions:daily.length,wins:a.filter(t=>t.net>0).length,losses:a.filter(t=>t.net<0).length,stops:a.filter(t=>t.reason==="STOP").length,targets:a.filter(t=>t.reason==="TARGET").length,timeExits:a.filter(t=>t.reason==="TIME"||t.reason==="SESSION_END").length,netPoints:round(net),avgNetPoints:a.length?round(net/a.length):null,worstSessionPoints:daily.length?round(Math.min(...daily)):null,maxClosedTradeDrawdownPoints:round(dd),netWithoutBestSessionPoints:daily.length?round(net-Math.max(...daily)):null,ambiguousStopTargetBars:a.filter(t=>t.ambiguous).length,knownExitsAtOrAfter11:a.filter(t=>t.exitMinutes!==null&&t.exitMinutes>=660).length,unknownExitTimes:a.filter(t=>t.exitMinutes===null).length,costStress:[0,1,2,4].map(extra=>({extraPointsPerTrade:extra,netPoints:round(net-extra*a.length)})),researchOnly:true}));
 }
 console.log("NATIVE_AUDIT_COMPLETE",JSON.stringify({eligible,excluded,orbNonOpening,trendNonOpening,wickCandidates,wickCollapsed,wickOverlap,wickLate,orbAmbiguous,trendAmbiguous,priorOosRejectionsRemain:true,notFreshOutOfSample:true,noStrategyApproved:true,noOrders:true}));
