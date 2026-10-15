@@ -38,7 +38,12 @@ if(exists){
     !["NQZ6","NQH7"].includes(auth.contract)||
     !Array.isArray(auth.utcDates)||auth.utcDates.length<1||auth.utcDates.length>4||
     auth.utcDates.some(d=>!dateValid(d)||d>(auth?.tradeDate??""))||
-    new Set(auth.utcDates).size!==auth.utcDates.length||auth.maxRequests!==4)
+    new Set(auth.utcDates).size!==auth.utcDates.length||auth.maxRequests!==4||
+    auth.utcDates.some(d=>{
+      const delta=(Date.parse(auth!.tradeDate+"T00:00:00Z")-Date.parse(d+"T00:00:00Z"))/86400000;
+      return delta<0||delta>1;
+    })||
+    (auth.tradeDate<"2026-12-14"&&auth.contract!=="NQZ6"))
     throw Error("E015_INVALID_AUTHORIZATION");
 }
 const evidence=auth?.evidence;
@@ -48,8 +53,12 @@ const validEvidence=Boolean(evidence&&
  /^https:\/\//.test(evidence.cmeNqHoursSource)&&
  !Number.isNaN(Date.parse(evidence.cmeNqHoursCheckedUtc))&&
  !Number.isNaN(Date.parse(evidence.approvedByUserAtUtc)));
+// E018: self-declared provenance strings are NOT independent evidence.
+// The local authorization format is insufficient to establish exchange hours,
+// prior-session contract volumes, or provider billing terms. Fail closed.
+const independentEvidenceVerified=false;
 const eligible=Boolean(auth?.verifiedCmeRegularSession&&auth?.verifiedPriorSessionContractSelection&&
- auth?.verifiedMassiveIncrementalCost&&auth?.explicitUserApproval&&validEvidence);
+ auth?.verifiedMassiveIncrementalCost&&auth?.explicitUserApproval&&validEvidence&&independentEvidenceVerified);
 const base=auth?resolve(root,"data/cache/massive/NQ",auth.contract):"";
 const missing=auth?auth.utcDates.filter(d=>!existsSync(join(base,d+".json"))):[];
 const ready=eligible&&missing.length<=4;
@@ -58,7 +67,7 @@ console.log("E015_PLAN",JSON.stringify({today,execute,authorizationFilePresent:e
  minimumIntervalMs:15000,automaticRetries:0,rateLimitPerMinute:5,
  verifiedCalendar:auth?.verifiedCmeRegularSession??false,verifiedRoll:auth?.verifiedPriorSessionContractSelection??false,
  verifiedCost:auth?.verifiedMassiveIncrementalCost??false,userApproval:auth?.explicitUserApproval??false,
- evidencePresent:validEvidence,ready,orders:0,strategyEvaluation:false}));
+ evidencePresent:validEvidence,independentEvidenceVerified,ready,orders:0,strategyEvaluation:false}));
 if(!execute){console.log("E015_DRY_RUN_ZERO_API_ZERO_WRITES");process.exit(0);}
 if(!ready)throw Error("E015_EXECUTION_BLOCKED_MISSING_VERIFIED_AUTHORIZATION");
 if(!process.env.MASSIVE_API_KEY?.trim())throw Error("E015_MASSIVE_API_KEY_MISSING");
