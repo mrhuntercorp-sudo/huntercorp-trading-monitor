@@ -2,7 +2,7 @@
  * Never replace cached data unless all 390 RTH minutes are present and valid.
  */
 import {createHash} from "node:crypto";
-import {readFile,rename,rm,writeFile} from "node:fs/promises";
+import {mkdir,readFile,rename,rm,writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import {auditRthCoverage} from "../research/rth-coverage.js";
 import {rthBars} from "../research/level-reclaim.js";
@@ -55,6 +55,17 @@ console.log("OCT15_CANDIDATE",JSON.stringify({utcBars:bars.length,rthBars:audit.
  missingRthMinutes:audit.missingMinutes,status:audit.status,
  latestUtc:bars.length?new Date(bars.at(-1)!.timestampMs).toISOString():null,requests:1}));
 if(audit.status!=="COMPLETE"){
+ // Keep incomplete data separate from the authoritative full-day cache.
+ // Never replace the existing day; snapshot is validated and checksum-protected.
+ const researchPath=join("data/cache/massive/NQ",ticker,date+".research.json");
+ const research={schema:1,provider:"massive",ticker,productCode:"NQ",utcDate:date,
+  sha256:digest(bars),bars,classification:"PARTIAL_RESEARCH_ONLY"};
+ await mkdir(join("data/cache/massive/NQ",ticker),{recursive:true});
+ const tmp=researchPath+"."+process.pid+".tmp";
+ try{await writeFile(tmp,JSON.stringify(research),{flag:"wx"});await rename(tmp,researchPath);}
+ finally{await rm(tmp,{force:true});}
+ console.log("OCT15_RESEARCH_SNAPSHOT",JSON.stringify({status:"SAVED_PARTIAL",utcBars:bars.length,
+  rthBars:audit.observedMinutes,path:researchPath,fullDayCachePreserved:true}));
  console.log("OCT15_REFRESH",JSON.stringify({status:"INCOMPLETE_NO_OVERWRITE",cachePreserved:true,requests:1}));process.exit(0);
 }
 if(bars.length<current.bars.length)throw Error("SHORTER_CANDIDATE_REFUSED");
