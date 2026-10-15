@@ -22,3 +22,6 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local phone notification topic (do not commit)
+.tm001-local/
