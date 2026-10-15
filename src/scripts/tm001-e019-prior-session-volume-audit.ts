@@ -20,7 +20,9 @@ const load=(ticker:string)=>{
  if(files.some(f=>!existsSync(f)))return {ticker,status:"MISSING_CACHE" as const,files,volume:null,coverage:null};
  const all:MinuteBar[]=[];
  for(let i=0;i<files.length;i++){
-  const record=JSON.parse(readFileSync(files[i],"utf8")) as {schema:number;ticker:string;utcDate:string;sha256:string;bars:MinuteBar[]};
+  const file=files[i];
+  if(!file)throw Error("E019_MISSING_EXPECTED_FILE_PATH");
+  const record=JSON.parse(readFileSync(file,"utf8")) as {schema:number;ticker:string;utcDate:string;sha256:string;bars:MinuteBar[]};
   if(record.schema!==1||record.ticker!==ticker||record.utcDate!==utcDates[i]||!Array.isArray(record.bars)||
    createHash("sha256").update(JSON.stringify(record.bars)).digest("hex")!==record.sha256)
    return {ticker,status:"INVALID_CACHE" as const,files,volume:null,coverage:null};
