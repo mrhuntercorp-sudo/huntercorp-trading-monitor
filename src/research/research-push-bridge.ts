@@ -18,6 +18,7 @@ export class ResearchPushBridge{
   // A historical replay must never publish to a phone, even if live mode is requested.
   if(opts.nowMs-confirmed>(opts.maxAgeMs??120000))return {status:"STALE",eventId:event.id};
   if(this.handled.has(event.id))return {status:"DUPLICATE",eventId:event.id};
+  if(opts.mode==="live"&&opts.approved!==true)throw Error("LIVE_DELIVERY_REQUIRES_EXPLICIT_APPROVAL");
   const {inserted,notice}=await this.outbox.enqueue(event);
   if(!inserted)return {status:"DUPLICATE",eventId:event.id};
   // Dry-run records a local notice but never calls a network transport.
