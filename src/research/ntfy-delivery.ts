@@ -5,7 +5,7 @@ export type PushResult={status:"DRY_RUN"|"PUBLISHED";noticeId:string;httpStatus?
 export function prepareNtfy(notice:Notice,topic:string):PushRequest{
  if(notice.classification!=="RESEARCH_ONLY"||notice.delivery!=="LOCAL_PENDING")throw Error("UNSUPPORTED_NOTICE");
  // Public ntfy topics are readable by anyone who knows the name. Require high-entropy topic.
- if(!/^[a-zA-Z0-9_-]{32,100}$/.test(topic))throw Error("TOPIC_MUST_BE_RANDOM_32_PLUS");
+ if(!/^[a-zA-Z0-9_-]{32,64}$/.test(topic))throw Error("TOPIC_MUST_BE_RANDOM_32_TO_64");
  if(!notice.title||!notice.body||notice.body.length>3500)throw Error("INVALID_NOTICE_CONTENT");
  return {url:"https://ntfy.sh/"+topic,method:"POST",
   headers:{"Content-Type":"text/plain; charset=utf-8","Title":notice.title,"Priority":"default","Tags":"mag"},
