@@ -32,7 +32,7 @@ try{
  const stored=JSON.parse(await readFile(path,"utf8")) as {schema:number;notices:unknown[]};
  assert.equal(stored.schema,1);
  assert.equal(stored.notices.length,1);
- assert.throws(()=>new LocalNotificationOutbox(path).enqueue({...events[0]!,classification:"LIVE" as "RESEARCH_ONLY"}),/UNSUPPORTED_EVENT/);
+ await assert.rejects(()=>new LocalNotificationOutbox(path).enqueue({...events[0]!,classification:"LIVE" as "RESEARCH_ONLY"}),/UNSUPPORTED_EVENT/);
  console.log("=== TM001 E029 LOCAL NOTIFICATION REGRESSION ===");
  console.log("NOTICE",JSON.stringify(result.notice));
  console.log("E029_COMPLETE",JSON.stringify({localPersistence:true,restartSafeDeduplication:true,
