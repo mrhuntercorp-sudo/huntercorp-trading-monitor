@@ -64,7 +64,9 @@ export class DurableResearchDelivery{
   // Persisted UNCERTAIN before publishing: crashes/timeouts never trigger automatic retry.
   try{
    const response=await deliverNtfy(notice,{topic:this.topic,mode:"live",approved:true,transport:opts.transport!});
-   record.state="PUBLISHED";record.httpStatus=response.httpStatus;record.updatedAtUtc=new Date().toISOString();
+   record.state="PUBLISHED";
+   if(response.httpStatus!==undefined)record.httpStatus=response.httpStatus;
+   record.updatedAtUtc=new Date().toISOString();
    await this.save(ledger);
    return {status:"PUBLISHED",eventId:event.id};
   }catch(e){
