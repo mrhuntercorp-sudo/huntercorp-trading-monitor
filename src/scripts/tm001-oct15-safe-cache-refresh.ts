@@ -46,7 +46,7 @@ const bars:MinuteBar[]=(payload.results??[]).map(r=>{
   timestampMs%60000!==0||[r.open,r.high,r.low,r.close,r.volume].some(v=>typeof v!=="number"||!Number.isFinite(v))||
   r.low!>Math.min(r.open!,r.close!)||r.high!<Math.max(r.open!,r.close!)||
   r.low!>r.high!||r.volume!<0)throw Error("INVALID_PROVIDER_BAR");
- return {contractTicker:ticker,productCode:"NQ",timestampMs,sessionEndDate:r.session_end_date,
+ return {contractTicker:ticker,productCode:"NQ" as const,timestampMs,sessionEndDate:r.session_end_date,
   open:r.open!,high:r.high!,low:r.low!,close:r.close!,volume:r.volume!};
 }).sort((a,b)=>a.timestampMs-b.timestampMs);
 if(bars.some((b,i)=>i>0&&b.timestampMs<=bars[i-1]!.timestampMs))throw Error("DUPLICATE_PROVIDER_BARS");
