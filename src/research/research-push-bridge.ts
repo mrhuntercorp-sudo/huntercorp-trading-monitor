@@ -29,6 +29,7 @@ export class ResearchPushBridge{
   // Fail closed on explicit approval. The local outbox is not an exactly-once
   // delivery ledger: if publication fails, operator intervention is required.
   if(opts.mode!=="live"||opts.approved!==true)throw Error("LIVE_DELIVERY_REQUIRES_EXPLICIT_APPROVAL");
+  if(!opts.transport)throw Error("NO_TRANSPORT_CONFIGURED");
   const result=await deliverNtfy(notice,{topic:this.topic,mode:"live",approved:true,transport:opts.transport});
   this.handled.add(event.id);
   return {status:result.status,eventId:event.id};
