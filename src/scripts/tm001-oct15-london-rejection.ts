@@ -2,6 +2,8 @@
  * Zero API calls. Never interprets missing data as no signal.
  */
 import {CachedHistoricalDays} from "../research/historical-cache.js";
+import {readFile} from "node:fs/promises";
+import {createHash} from "node:crypto";
 import {rthBars} from "../research/level-reclaim.js";
 import {newYorkClock} from "../market/time.js";
 import {LondonHighRejectionDetector} from "../research/market-intelligence.js";
@@ -9,7 +11,24 @@ import {simulateFixedShort} from "../research/fixed-short-feasibility.js";
 import type {MinuteBar} from "../market/types.js";
 const date="2026-10-15",ticker="NQZ6";
 const cache=new CachedHistoricalDays({async getContractMinuteBars(){throw Error("NETWORK_DISABLED");}});
-const day=await cache.getDay({ticker,productCode:"NQ"},date);
+let day=await cache.getDay({ticker,productCode:"NQ"},date);
+try {
+ const file="data/cache/massive/NQ/"+ticker+"/"+date+".research.json";
+ const snapshot=JSON.parse(await readFile(file,"utf8")) as {
+  schema:number;provider:string;ticker:string;productCode:string;utcDate:string;
+  sha256:string;bars:MinuteBar[];
+ };
+ const checksum=createHash("sha256").update(JSON.stringify(snapshot.bars)).digest("hex");
+ if(snapshot.schema!==1||snapshot.provider!=="massive"||snapshot.ticker!==ticker||
+    snapshot.productCode!=="NQ"||snapshot.utcDate!==date||snapshot.sha256!==checksum||
+    !Array.isArray(snapshot.bars)) throw Error("INVALID_RESEARCH_SNAPSHOT");
+ if(snapshot.bars.length>day.length){
+  day=snapshot.bars;
+  console.log("RESEARCH_SNAPSHOT_USED",day.length);
+ }
+} catch(error) {
+ if((error as NodeJS.ErrnoException).code!=="ENOENT") throw error;
+}
 const all=day;
 const minute=(b:MinuteBar)=>{const c=newYorkClock(b.timestampMs);return {date:c.date,m:c.hour*60+c.minute};};
 const london=all.filter(b=>{const c=minute(b);return c.date===date&&c.m>=120&&c.m<540;});
