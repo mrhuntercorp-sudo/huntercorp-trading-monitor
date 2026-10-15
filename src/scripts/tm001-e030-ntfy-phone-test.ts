@@ -9,7 +9,15 @@ const args=new Set(process.argv.slice(2));
 if(args.has("--setup")||args.has("--rotate")){
  if(args.size!==1)throw Error("SINGLE_SETUP_ACTION_ONLY");
  let topic:string;
- try{topic=(await readFile(file,"utf8")).trim();\n  if(args.has("--rotate")||topic.length>64){\n   const replacement="huntercorp_tm001_"+randomBytes(20).toString("hex");\n   const temp=file+"."+process.pid+".tmp";\n   await writeFile(temp,replacement+"\\n",{flag:"wx",mode:0o600});\n   await rename(temp,file);\n   topic=replacement;\n  }\n }
+ try{topic=(await readFile(file,"utf8")).trim(); 
+  if(args.has("--rotate")||topic.length>64){
+   const replacement="huntercorp_tm001_"+randomBytes(20).toString("hex");
+   const temp=file+"."+process.pid+".tmp";
+   await writeFile(temp,replacement+"\n",{flag:"wx",mode:0o600});
+   await rename(temp,file);
+   topic=replacement;
+  }
+ }
  catch(e){if((e as NodeJS.ErrnoException).code!=="ENOENT")throw e;
   topic="huntercorp_tm001_"+randomBytes(20).toString("hex");
   await mkdir(dirname(file),{recursive:true});
