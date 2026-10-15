@@ -53,6 +53,25 @@ if(missingOpening.length){
  londonHigh,observedRejections:observed,missingOpeningMinutes:missingOpening.length,
  noSignalConclusionAllowed:false,tradeOutcomes:"NOT_SCORED"}));process.exit(0);
 }
+// Diagnostic only: describe price action without changing the frozen entry rule.
+const swept=opening.filter(b=>b.high>londonHigh);
+const touched=opening.filter(b=>b.high===londonHigh);
+const closesBelowAfterSweep=swept.filter(b=>b.close<londonHigh);
+const firstSweep=swept[0]??null;
+const format=(b:MinuteBar|null)=>b?{
+ et:newYorkClock(b.timestampMs).date+" "+String(newYorkClock(b.timestampMs).hour).padStart(2,"0")+":"+String(newYorkClock(b.timestampMs).minute).padStart(2,"0"),
+ open:b.open,high:b.high,low:b.low,close:b.close}:null;
+const windowHigh=Math.max(...opening.map(b=>b.high));
+const windowLow=Math.min(...opening.map(b=>b.low));
+console.log("OCT15_LONDON_PRICE_ACTION",JSON.stringify({
+ londonHigh,openingHigh:windowHigh,openingLow:windowLow,
+ highestAboveLondon:Math.max(0,windowHigh-londonHigh),
+ candlesAboveLevel:swept.length,candlesTouchingLevel:touched.length,
+ firstSweep:format(firstSweep),
+ sweptAndClosedBelowCount:closesBelowAfterSweep.length,
+ classification:swept.length===0?"NO_SWEEP":closesBelowAfterSweep.length===0?"SWEPT_NO_SAME_CANDLE_REJECTION":"REJECTION_PATTERN_PRESENT",
+ detectorObservations:observed.length,diagnosticOnly:true,requests:0,orders:0
+}));
 if(!observed.length){
  console.log("OCT15_LONDON_RESULT",JSON.stringify({status:"NO_LONDON_HIGH_REJECTION_BEFORE_11",londonHigh,observations:0}));
  process.exit(0);
