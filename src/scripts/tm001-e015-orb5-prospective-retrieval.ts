@@ -24,6 +24,7 @@ for(const [file,expected] of locked)
 type Authorization={schema:1;tradeDate:string;contract:"NQZ6"|"NQH7";utcDates:string[];
  verifiedCmeRegularSession:boolean;verifiedPriorSessionContractSelection:boolean;
  verifiedMassiveIncrementalCost:boolean;explicitUserApproval:boolean;
+ evidence?:{cmeNqHoursSource:string;cmeNqHoursCheckedUtc:string;priorSessionContractEvidence:string;massiveCostEvidence:string;approvedByUserAtUtc:string};
  maxRequests:4;expiresUtcDate:string};
 const dateValid=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&new Date(s+"T00:00:00Z").toISOString().slice(0,10)===s;
 const today=new Date().toISOString().slice(0,10);
@@ -40,8 +41,15 @@ if(exists){
     new Set(auth.utcDates).size!==auth.utcDates.length||auth.maxRequests!==4)
     throw Error("E015_INVALID_AUTHORIZATION");
 }
+const evidence=auth?.evidence;
+const validEvidence=Boolean(evidence&&
+ ["cmeNqHoursSource","cmeNqHoursCheckedUtc","priorSessionContractEvidence","massiveCostEvidence","approvedByUserAtUtc"]
+ .every(k=>typeof evidence[k as keyof typeof evidence]==="string"&&evidence[k as keyof typeof evidence].trim().length>=12)&&
+ /^https:\/\//.test(evidence.cmeNqHoursSource)&&
+ !Number.isNaN(Date.parse(evidence.cmeNqHoursCheckedUtc))&&
+ !Number.isNaN(Date.parse(evidence.approvedByUserAtUtc)));
 const eligible=Boolean(auth?.verifiedCmeRegularSession&&auth?.verifiedPriorSessionContractSelection&&
- auth?.verifiedMassiveIncrementalCost&&auth?.explicitUserApproval);
+ auth?.verifiedMassiveIncrementalCost&&auth?.explicitUserApproval&&validEvidence);
 const base=auth?resolve(root,"data/cache/massive/NQ",auth.contract):"";
 const missing=auth?auth.utcDates.filter(d=>!existsSync(join(base,d+".json"))):[];
 const ready=eligible&&missing.length<=4;
@@ -50,7 +58,7 @@ console.log("E015_PLAN",JSON.stringify({today,execute,authorizationFilePresent:e
  minimumIntervalMs:15000,automaticRetries:0,rateLimitPerMinute:5,
  verifiedCalendar:auth?.verifiedCmeRegularSession??false,verifiedRoll:auth?.verifiedPriorSessionContractSelection??false,
  verifiedCost:auth?.verifiedMassiveIncrementalCost??false,userApproval:auth?.explicitUserApproval??false,
- ready,orders:0,strategyEvaluation:false}));
+ evidencePresent:validEvidence,ready,orders:0,strategyEvaluation:false}));
 if(!execute){console.log("E015_DRY_RUN_ZERO_API_ZERO_WRITES");process.exit(0);}
 if(!ready)throw Error("E015_EXECUTION_BLOCKED_MISSING_VERIFIED_AUTHORIZATION");
 if(!process.env.MASSIVE_API_KEY?.trim())throw Error("E015_MASSIVE_API_KEY_MISSING");
