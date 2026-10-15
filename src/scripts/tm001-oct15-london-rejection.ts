@@ -10,7 +10,20 @@ import type {MinuteBar} from "../market/types.js";
 const date="2026-10-15",ticker="NQZ6";
 const cache=new CachedHistoricalDays({async getContractMinuteBars(){throw Error("NETWORK_DISABLED");}});
 const day=await cache.getDay({ticker,productCode:"NQ"},date);
-const previous=await cache.getDay({ticker,productCode:"NQ"},"2026-10-14");
+let previous:MinuteBar[]=[];
+try{
+ previous=await cache.getDay({ticker,productCode:"NQ"},"2026-10-14");
+}catch(error){
+ if((error as Error).message!=="NETWORK_DISABLED")throw error;
+ console.log("=== TM001 OCT 15 LONDON REJECTION CHECK ===");
+ console.log("OCT15_LONDON_RESULT",JSON.stringify({
+  status:"MISSING_PREVIOUS_UTC_CACHE",
+  missingUtcDate:"2026-10-14",
+  reason:"London 02:00-09:00 ET and the overnight context span UTC dates",
+  requests:0,orders:0,noTradeScoring:true
+ }));
+ process.exit(0);
+}
 const all=[...previous,...day].sort((a,b)=>a.timestampMs-b.timestampMs);
 const minute=(b:MinuteBar)=>{const c=newYorkClock(b.timestampMs);return {date:c.date,m:c.hour*60+c.minute};};
 const london=all.filter(b=>{const c=minute(b);return c.date===date&&c.m>=120&&c.m<540;});
