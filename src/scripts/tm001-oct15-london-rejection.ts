@@ -72,6 +72,28 @@ console.log("OCT15_LONDON_PRICE_ACTION",JSON.stringify({
  classification:swept.length===0?"NO_SWEEP":closesBelowAfterSweep.length===0?"SWEPT_NO_SAME_CANDLE_REJECTION":"REJECTION_PATTERN_PRESENT",
  detectorObservations:observed.length,diagnosticOnly:true,requests:0,orders:0
 }));
+// Post-11 observation: classify acceptance versus failure of the London-high break.
+// Descriptive only. No new entries, optimization, or retrospective trade scoring.
+const after= rthBars(all,date).filter(b=>{const m=minute(b).m;return m>=660&&m<690;});
+const available=after.length;
+const above=after.filter(b=>b.close>londonHigh);
+const below=after.filter(b=>b.close<londonHigh);
+const retest=after.filter(b=>b.low<=londonHigh&&b.high>=londonHigh);
+const firstBelow=below[0]??null;
+const last=after.at(-1)??null;
+console.log("OCT15_POST11_CONTINUATION",JSON.stringify({
+ window:"11:00-11:29_ET",availableMinutes:available,requiredMinutes:30,
+ londonHigh,firstSweepEt:format(firstSweep)?.et??null,
+ closesAbove:above.length,closesBelow:below.length,
+ firstCloseBelow:format(firstBelow),retestCandles:retest.length,
+ post11High:available?Math.max(...after.map(b=>b.high)):null,
+ post11Low:available?Math.min(...after.map(b=>b.low)):null,
+ lastCandle:format(last),
+ classification:available<30?"INCOMPLETE_OBSERVATION":
+  below.length>0?"BREAK_FAILED_AT_LEAST_ONCE":
+  above.length===30?"HELD_ABOVE_ALL_30_CLOSES":"MIXED_OR_AT_LEVEL",
+ researchOnly:true,noTradeScoring:true,requests:0,orders:0
+}));
 if(!observed.length){
  console.log("OCT15_LONDON_RESULT",JSON.stringify({status:"NO_LONDON_HIGH_REJECTION_BEFORE_11",londonHigh,observations:0}));
  process.exit(0);
