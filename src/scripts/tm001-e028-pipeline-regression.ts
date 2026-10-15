@@ -1,0 +1,43 @@
+/** E028 cache-only pipeline integration and safety regression. */
+import {strict as assert} from "node:assert";
+import {CachedHistoricalDays} from "../research/historical-cache.js";
+import {makeBriefing} from "../research/market-intelligence.js";
+import {IntelligencePipeline} from "../research/intelligence-pipeline.js";
+import {rthBars} from "../research/level-reclaim.js";
+import type {MinuteBar} from "../market/types.js";
+const ticker="NQZ6",date="2026-10-02",previous="2026-10-01";
+const cache=new CachedHistoricalDays({async getContractMinuteBars(){throw Error("NETWORK_DISABLED");}});
+const bars:MinuteBar[]=[];
+for(const d of ["2026-09-30","2026-10-01","2026-10-02"])bars.push(...await cache.getDay({ticker,productCode:"NQ"},d));
+const briefing=makeBriefing(bars,date,previous,ticker);
+const rth=rthBars(bars,date);
+const pipeline=new IntelligencePipeline(date,ticker,briefing.levels.london.high);
+const events=rth.map(b=>pipeline.consume(b).event).filter(e=>e!==null);
+assert.equal(events.length,1);
+const event=events[0]!;
+assert.equal(event.observedAtUtc,"2026-10-02T13:43:00.000Z");
+assert.equal(event.confirmedAtUtc,"2026-10-02T13:44:00.000Z");
+assert.equal(event.level,31179);
+assert.equal(event.delivery,"LOCAL_ONLY");
+assert.equal(event.classification,"RESEARCH_ONLY");
+const replay=new IntelligencePipeline(date,ticker,31179);
+const first=rth[0]!;
+assert.equal(replay.consume(first).status,"ACCEPTED");
+assert.equal(replay.consume(first).status,"DUPLICATE");
+assert.throws(()=>replay.consume({...first,close:first.close+0.25}),/CONFLICTING_DUPLICATE/);
+const gap=new IntelligencePipeline(date,ticker,31179);
+assert.equal(gap.consume(first).status,"ACCEPTED");
+assert.equal(gap.consume(rth[2]!).status,"GAP_QUARANTINED");
+assert.equal(gap.consume(rth[3]!).status,"GAP_QUARANTINED");
+const signal=rth.find(b=>b.timestampMs===Date.parse("2026-10-02T13:43:00.000Z"))!;
+assert.equal(gap.consume(signal).event,null);
+const wrong=new IntelligencePipeline(date,ticker,31179);
+assert.throws(()=>wrong.consume({...first,contractTicker:"NQU6"}),/WRONG_CONTRACT/);
+const order=new IntelligencePipeline(date,ticker,31179);
+order.consume(rth[1]!);
+assert.throws(()=>order.consume(first),/OUT_OF_ORDER_BAR/);
+console.log("=== TM001 E028 MONITOR PIPELINE REGRESSION ===");
+console.log("EVENT",JSON.stringify(event));
+console.log("E028_COMPLETE",JSON.stringify({oneEvent:true,duplicateSuppression:true,conflictingDuplicateGuard:true,
+ missingCandleQuarantine:true,failClosed:true,contractGuard:true,chronologyGuard:true,
+ noApi:true,noOrders:true,externalNotifications:false}));
