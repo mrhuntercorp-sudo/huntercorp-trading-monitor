@@ -11,7 +11,8 @@ const tickers=(await readdir(root,{withFileTypes:true})).filter(x=>x.isDirectory
 const byContract=new Map<string,Map<string,Map<number,MinuteBar>>>();
 for(const ticker of tickers){
  const days=new Map<string,Map<number,MinuteBar>>();
- const names=(await readdir(join(root,ticker))).filter(x=>/^\\d{4}-\\d{2}-\\d{2}(\\.research)?\\.json$/.test(x)).sort();
+ const names=(await readdir(join(root,ticker))).filter(x=>/^\d{4}-\d{2}-\d{2}(\.research)?\.json$/.test(x)).sort();
+ if(names.length===0)throw Error("NO_CACHE_FILES_MATCHED "+ticker+"; inspect filename regex");
  const selected=new Map<string,{name:string;bars:MinuteBar[]}>();
  for(const name of names){
   const d=JSON.parse(await readFile(join(root,ticker,name),"utf8")) as RecordData;
@@ -33,6 +34,7 @@ for(const ticker of tickers){
 }
 const missing=(day:Map<number,MinuteBar>,start:number,end:number)=>{let n=0;for(let m=start;m<end;m++)if(!day.has(m))n++;return n;};
 const dates=[...new Set([...byContract.values()].flatMap(days=>[...days.keys()]))].sort();
+if(dates.length===0)throw Error("NO_NY_DATES: audit invalid");
 console.log("=== TM001 MULTI-CONTRACT LONDON SWEEP COVERAGE ===");
 console.log("RULES "+JSON.stringify({readOnly:true,apiCalls:0,writes:0,orders:0,signalsCalculated:false,rollSelectionApproved:false,cacheSelection:"longest validated UTC-day record, standard or research",windowsEt:{london:"02:00-08:59",signal:"09:30-10:59",exitCoverage:"11:00-11:29"}}));
 let unique=0,ambiguous=0,partial=0;
