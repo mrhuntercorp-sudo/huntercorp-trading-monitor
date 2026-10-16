@@ -31,18 +31,18 @@ for(const file of files){
 }
 type Setup="HIGH_BREAK_LONG"|"HIGH_SWEEP_SHORT"|"LOW_BREAK_SHORT"|"LOW_SWEEP_LONG";
 const setups:Setup[]=["HIGH_BREAK_LONG","HIGH_SWEEP_SHORT","LOW_BREAK_SHORT","LOW_SWEEP_LONG"];
-const variants=[{contracts:1,stop:100,target:300},{contracts:5,stop:20,target:60}] as const;
+const variants=[{target:10,stop:12.5},{target:20,stop:12.5}] as const;
 const match=(s:Setup,b:MinuteBar,hi:number,lo:number)=>s==="HIGH_BREAK_LONG"?b.high>hi&&b.close>hi:s==="HIGH_SWEEP_SHORT"?b.high>hi&&b.close<hi:s==="LOW_BREAK_SHORT"?b.low<lo&&b.close<lo:b.low<lo&&b.close>lo;
 const et=(b:MinuteBar)=>{const m=clock(b).m;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
-type Trade={date:string;setup:Setup;contracts:number;grossDollars:number;reason:string;ambiguous:boolean};
+type Trade={date:string;setup:Setup;targetPoints:number;grossDollars:number;reason:string;ambiguous:boolean};
 const trades:Trade[]=[];
 let eligible=0,excluded=0;
-console.log("=== TM001 MNQ $200 RISK / $600 TARGET RESEARCH ===");
-console.log("TEST_RULES",JSON.stringify({source:"NQZ6_1M_PROXY_FOR_MNQ_PRICE_MOVEMENT",
- variants:variants.map(v=>({...v,riskDollars:200,targetDollars:600})),
+console.log("=== TM001 NQ $250 RISK / $200 AND $400 TARGET RESEARCH ===");
+console.log("TEST_RULES",JSON.stringify({source:"NQZ6_1M",
+ variants:variants.map(v=>({...v,contracts:1,riskDollars:250,targetDollars:v.target*20})),
  signalWindow:"09:30-10:59_ET",entry:"NEXT_BAR_OPEN",maxBars:30,
  gapStopsAtOpen:true,stopFirst:true,commissionAndSlippage:"EXCLUDED_REPORT_GROSS",
- contractsIndependent:true,orders:0,requests:0,inSample:true}));
+ targetsIndependent:true,orders:0,requests:0,inSample:true}));
 for(const [date,bars] of [...records].sort(([a],[b])=>a.localeCompare(b))){
  const london=bars.filter(b=>{const c=clock(b);return c.date===date&&c.m>=120&&c.m<540;});
  const opening=bars.filter(b=>{const c=clock(b);return c.date===date&&c.m>=570&&c.m<660;});
@@ -70,19 +70,19 @@ for(const [date,bars] of [...records].sort(([a],[b])=>a.localeCompare(b))){
     if(hitStop){exit=stop;reason="STOP";ambiguous=hitTarget;held=i+1;break;}
     if(hitTarget){exit=target;reason="TARGET";held=i+1;break;}
    }
-   const grossDollars=Number(((isLong?exit-entry:entry-exit)*2*v.contracts).toFixed(2));
-   trades.push({date,setup,contracts:v.contracts,grossDollars,reason,ambiguous});
-   console.log("TRADE",JSON.stringify({date,setup,contracts:v.contracts,signalEt:et(signal),
+   const grossDollars=Number(((isLong?exit-entry:entry-exit)*20).toFixed(2));
+   trades.push({date,setup,targetPoints:v.target,grossDollars,reason,ambiguous});
+   console.log("TRADE",JSON.stringify({date,setup,targetPoints:v.target,contracts:1,signalEt:et(signal),
     entry,stop,target,exit,reason,heldBars:held,grossDollars,ambiguous,
     estimatedNetDollars:null,feesNotIncluded:true}));
   }
  }
 }
 for(const setup of setups)for(const v of variants){
- const rows=trades.filter(t=>t.setup===setup&&t.contracts===v.contracts);
+ const rows=trades.filter(t=>t.setup===setup&&t.targetPoints===v.target);
  let equity=0,peak=0,drawdown=0;
  for(const t of rows){equity+=t.grossDollars;peak=Math.max(peak,equity);drawdown=Math.max(drawdown,peak-equity);}
- console.log("VARIANT_SUMMARY",JSON.stringify({setup,contracts:v.contracts,trades:rows.length,
+ console.log("VARIANT_SUMMARY",JSON.stringify({setup,targetPoints:v.target,contracts:1,trades:rows.length,
   wins:rows.filter(t=>t.grossDollars>0).length,losses:rows.filter(t=>t.grossDollars<0).length,
   targets:rows.filter(t=>t.reason==="TARGET").length,
   stops:rows.filter(t=>t.reason.startsWith("STOP")).length,
@@ -94,5 +94,5 @@ for(const setup of setups)for(const v of variants){
   netAfterFees:"NOT_CALCULATED"}));
 }
 console.log("TEST_SUMMARY",JSON.stringify({eligibleDays:eligible,excludedContextDays:excluded,
- warning:"NQ proxy prices, gross-only, in-sample, 30-minute timeout, no MNQ-specific fill validation",
+ warning:"NQ 1-minute prices, gross-only, in-sample, 30-minute timeout, no tick-level fill validation",
  requests:0,orders:0}));
