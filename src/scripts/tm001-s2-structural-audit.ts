@@ -31,7 +31,7 @@ for(const file of files){
 }
 const minute=(b:MinuteBar)=>{const c=newYorkClock(b.timestampMs);return c.hour*60+c.minute;};
 type Signal={utc:string;side:"LONG"|"SHORT";price:number;retracement:number};
-let eligible=0,blocked=0,original=0,strict=0,overlap=0,strictOverlap=0,london=0;
+let eligible=0,blocked=0,original=0,strict=0,overlap=0,strictOverlap=0,londonSweepDays=0;
 console.log("=== TM001 S2 STRUCTURAL AUDIT ===");
 console.log("AUDIT_RULES",JSON.stringify({original:"Same permissive 15m impulse / 5-bar window / next close trigger as census",strictDiagnostic:"Five consecutive countertrend closes (each <= prior for LONG, >= prior for SHORT), with at least 15pt retracement; trigger on following bar close beyond prior close",londonSweep:"420 complete London minutes 02:00-08:59 ET; first 09:30-10:59 high > London high and close < London high",noOptimization:true,apiCalls:0,orders:0,externalAlerts:0}));
 for(const date of [...all.keys()].sort()){
@@ -68,9 +68,9 @@ for(const date of [...all.keys()].sort()){
  const sweepUtc=sweep?new Date(sweep.timestampMs).toISOString():null;
  if(orig)original++;
  if(str)strict++;
- if(sweep)london++;
+ if(sweep)londonSweepDays++;
  if(orig&&sweep)overlap++;
  if(str&&sweep)strictOverlap++;
  console.log("AUDIT_DAY",JSON.stringify({date,status:"ELIGIBLE",openingMove:Number(move.toFixed(2)),original:orig,strict:str,londonCoverageComplete:londonComplete,londonSweepUtc:sweepUtc,originalSameDayOverlap:!!(orig&&sweep),strictSameDayOverlap:!!(str&&sweep)}));
 }
-console.log("S2_AUDIT_END",JSON.stringify({dates:all.size,eligible,blocked,originalCandidates:original,strictDiagnosticCandidates:strict,londonSweepDays:london,originalOverlapDays:overlap,strictOverlapDays:strictOverlap,strictRuleIsDiagnosticOnly:true,notAProfitabilityTest:true,apiCalls:0,orders:0,externalAlerts:0}));
+console.log("S2_AUDIT_END",JSON.stringify({dates:all.size,eligible,blocked,originalCandidates:original,strictDiagnosticCandidates:strict,londonSweepDays,originalOverlapDays:overlap,strictOverlapDays:strictOverlap,strictRuleIsDiagnosticOnly:true,notAProfitabilityTest:true,apiCalls:0,orders:0,externalAlerts:0}));
