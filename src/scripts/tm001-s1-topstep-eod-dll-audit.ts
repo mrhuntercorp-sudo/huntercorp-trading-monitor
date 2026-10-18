@@ -38,7 +38,6 @@ for(const date of [...all.keys()].sort()){
  if(!entryBar){blocked++;console.log("S1_DAY",JSON.stringify({date,status:"BLOCKED_ENTRY"}));continue;}
  const entry=entryBar.open,stop=Math.max(londonHigh,rejection.high)+0.25,risk=stop-entry;
  if(risk<=0){blocked++;console.log("S1_DAY",JSON.stringify({date,status:"BLOCKED_NONPOSITIVE_RISK",entry,stop}));continue;}
- const target=entry-3*risk; // reported for comparability only; NOT an exit
  let exit:null|{price:number;reason:string}=null;
  let active=false,trailStop=stop,lowest=entry,worstPrice=entry;
  for(let m=entryMinute;m<entryMinute+30;m++){
