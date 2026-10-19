@@ -136,7 +136,7 @@ for(const name of names)for(const slippage of [0,4]){
    if(result.breach)breaches++;
    if(result.over1500Days>0)personalCapViolations++;
    bestNet=Math.max(bestNet,result.net);worstNet=Math.min(worstNet,result.net);sumNet+=result.net;
-   console.log("HORIZON_WINDOW",JSON.stringify({name,slippage,horizon,start:days[0],end:days[days.length-1],...result}));
+   console.log("HORIZON_WINDOW",JSON.stringify({...result,horizon,start:days[0],end:days[days.length-1]}));
   }
   console.log("HORIZON_SUMMARY",JSON.stringify({name,slippage,horizon,windows,passes,passFraction:windows?round(passes/windows):null,breaches,windowsWithOver1500Day:personalCapViolations,bestNet:round(bestNet),worstNet:round(worstNet),averageNet:round(sumNet/windows),earliestPassSession:earliestPass,apiCalls:0,orders:0}));
  }
