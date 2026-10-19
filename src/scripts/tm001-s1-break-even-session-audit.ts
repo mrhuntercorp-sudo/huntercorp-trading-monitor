@@ -94,7 +94,7 @@ const weekdays=(date:string)=>{const d=new Date(date+"T12:00:00Z").getUTCDay();r
 const dateNext=(date:string)=>new Date(Date.parse(date+"T12:00:00Z")+86400000).toISOString().slice(0,10);
 const eligibleSet=new Set(eligibleDates);
 const rawByDate=new Map(raw.map(t=>[t.date,t]));
-const first=eligibleDates[0],last=eligibleDates[eligibleDates.length-1];
+const first=eligibleDates[0]!,last=eligibleDates[eligibleDates.length-1]!;
 let weekdayCount=0,missingWeekdays=0;
 for(let d=first;d<=last;d=dateNext(d)){if(weekdays(d)){weekdayCount++;if(!eligibleSet.has(d))missingWeekdays++;}}
 console.log("SESSION_COVERAGE",JSON.stringify({first,last,weekdayCount,completeEligibleSessions:eligibleDates.length,missingOrExcludedWeekdays:missingWeekdays,signalSessions:raw.length,blocked,rollExcluded,incomplete,warning:"Weekdays include market holidays; missing or excluded days cannot be treated as verified no-signal sessions."}));
