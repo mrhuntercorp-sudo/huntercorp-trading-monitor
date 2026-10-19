@@ -50,20 +50,15 @@ const simulate=(future:MinuteBar[],entry:number,initialStop:number,risk:number,d
  const config=exitName==="STEPPED_30_20"?{activation:30,lock:10}:{activation:40,lock:20};
  for(let i=0;i<future.length;i++){
   const bar=future[i]!;
-  if(exitName!=="FIXED_3R"&&armed){
+  if(armed){
    const steps=Math.floor((entry-lowest-config.activation)/10);
    const candidate=entry-config.lock-steps*10;
    if(candidate<stop)stop=candidate;
   }
   if(i>0&&bar.open>=stop){exit=bar.open;exitIndex=i;reason="STOP_GAP";break;}
   if(bar.high>=stop){exit=stop;exitIndex=i;reason="STOP";break;}
-  if(exitName==="FIXED_3R"){
-   const target=entry-3*risk;
-   if(i>0&&bar.open<=target){exit=bar.open;exitIndex=i;reason="TARGET_GAP";break;}
-   if(bar.low<=target){exit=target;exitIndex=i;reason="TARGET";break;}
-  }
   lowest=Math.min(lowest,bar.low);
-  if(exitName!=="FIXED_3R"&&entry-lowest>=config.activation)armed=true;
+  if(entry-lowest>=config.activation)armed=true;
  }
  const after=future.slice(exitIndex+1);
  const favorableAfterExit=after.length?round(Math.max(0,entry-Math.min(...after.map(x=>x.low)))):0;
